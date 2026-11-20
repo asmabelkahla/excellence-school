@@ -1,0 +1,73 @@
+<div class="teacher-classes-page">
+  <div class="teacher-header esm-card">
+    <div class="teacher-info-banner">
+      <div class="avatar-box">👩‍🏫</div>
+      <div>
+        <h2 class="esm-card-title">Bienvenue, {{ auth.currentUser()?.full_name }}</h2>
+        <p class="text-slate-500">Enseignant • Année Scolaire 2026-2027</p>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="noteToast" class="save-toast">
+    ✓ Note envoyée au parent avec succès.
+  </div>
+
+  <div class="section-title">Mes Classes Assignées</div>
+
+  <div class="classes-grid" *ngIf="getAssignedClasses().length > 0; else noAssignedClass">
+    <div *ngFor="let cls of getAssignedClasses()" class="class-card esm-card">
+      <div class="class-card-top">
+        <h3 class="class-name">{{ cls.name }}</h3>
+        <span class="badge badge-gold">{{ getStudentsForClass(cls.id).length }} élèves</span>
+      </div>
+
+      <div class="subjects-taught">
+        <span class="label">Classe assignée :</span>
+        <div class="badges-row">
+          <span class="badge badge-sky">{{ cls.name }}</span>
+          <span class="badge badge-mint">{{ cls.teacher_name || 'Enseignant principal' }}</span>
+        </div>
+      </div>
+
+      <div class="class-student-list" *ngIf="getStudentsForClass(cls.id).length > 0">
+        <div class="mini-list-header">Élèves</div>
+        <div class="student-mini-row" *ngFor="let student of getStudentsForClass(cls.id).slice(0, 4)">
+          <span>{{ student.first_name }} {{ student.last_name }}</span>
+          <a class="mini-note-btn" routerLink="/teacher/messages" [queryParams]="{ nouveau: 1 }" title="Écrire aux parents (messagerie)">Note</a>
+        </div>
+      </div>
+
+      <div class="class-actions-grid">
+        <a routerLink="/teacher/attendance" class="btn btn-sm btn-secondary">📋 Faire l'appel</a>
+        <a routerLink="/teacher/grades" class="btn btn-sm btn-primary-gold">✍️ Saisir Notes</a>
+        <a routerLink="/teacher/homework" class="btn btn-sm btn-outline-gold">📝 Publier Devoir</a>
+      </div>
+    </div>
+  </div>
+
+  <ng-template #noAssignedClass>
+    <div class="esm-card" style="margin-top: 1rem; padding: 1.25rem;">
+      <p class="text-slate-500">Aucune classe n’est encore affectée à votre compte enseignant.</p>
+    </div>
+  </ng-template>
+
+  <div class="esm-card" style="margin-top: 1.25rem;">
+    <div class="esm-card-header">
+      <h3 class="esm-card-title">📅 Agenda de la semaine</h3>
+      <a routerLink="/admin/calendar" class="badge badge-gold">Voir le calendrier</a>
+    </div>
+    <div class="widget-agenda-list">
+      <div *ngFor="let evt of calendar.upcoming().slice(0, 5)" class="agenda-mini-row">
+        <div class="agenda-day-box">
+          <span>{{ evt.starts_at | date:'dd' }}</span>
+        </div>
+        <div class="agenda-text">
+          <strong>{{ evt.title }}</strong>
+          <small>{{ evt.category }} • {{ evt.all_day ? 'Toute la journée' : (evt.starts_at | date:'HH:mm') }}</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

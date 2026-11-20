@@ -1,0 +1,712 @@
+<div class="structure-page">
+  <div class="structure-top-bar esm-card">
+    <div>
+      <h2 class="esm-card-title">🏫 Gestion de l’école</h2>
+      <p class="text-slate-500">Élèves, parents, personnel, classes et structure pédagogique.</p>
+    </div>
+
+    <div class="tab-pills" role="tablist" aria-label="Sections">
+      <button type="button" role="tab" class="pill-btn" [class.active]="selectedTab === 'students'" [attr.aria-selected]="selectedTab === 'students'" (click)="setTab('students')">Élèves ({{ api.students().length }})</button>
+      <button type="button" role="tab" class="pill-btn" [class.active]="selectedTab === 'parents'" [attr.aria-selected]="selectedTab === 'parents'" (click)="setTab('parents')">Parents ({{ parentsApi.parents().length }})</button>
+      <button type="button" role="tab" class="pill-btn" [class.active]="selectedTab === 'staff'" [attr.aria-selected]="selectedTab === 'staff'" (click)="setTab('staff')">Personnel ({{ staffApi.activeCount() }})</button>
+      <button type="button" role="tab" class="pill-btn" [class.active]="selectedTab === 'classes'" [attr.aria-selected]="selectedTab === 'classes'" (click)="setTab('classes')">Classes ({{ api.classes().length }})</button>
+      <button type="button" role="tab" class="pill-btn" [class.active]="selectedTab === 'subjects'" [attr.aria-selected]="selectedTab === 'subjects'" (click)="setTab('subjects')">Matières</button>
+      <button type="button" role="tab" class="pill-btn" [class.active]="selectedTab === 'levels'" [attr.aria-selected]="selectedTab === 'levels'" (click)="setTab('levels')">Niveaux ({{ schoolData.levels().length }})</button>
+    </div>
+  </div>
+
+  @if (notice()) {
+    <div class="alert alert-success" role="status">✓ {{ notice() }}</div>
+  }
+
+  @if (revealedPassword(); as revealed) {
+    <section class="esm-card password-reveal" role="alert" aria-labelledby="reveal-title">
+      <h3 class="esm-card-title" id="reveal-title">
+        🔑 {{ revealed.isNew ? 'Compte créé pour ' : 'Nouveau mot de passe pour ' }}{{ revealed.name }}
+      </h3>
+      <p>
+        Transmettez ces identifiants à la personne. <strong>Ce mot de passe ne sera plus jamais affiché</strong> :
+        elle devra le remplacer par le sien à sa première connexion.
+      </p>
+      <dl class="credentials">
+        <dt>Identifiant</dt><dd><code>{{ revealed.email }}</code></dd>
+        <dt>Mot de passe provisoire</dt><dd><code class="temp-password">{{ revealed.password }}</code></dd>
+      </dl>
+      <div class="form-actions">
+        <button type="button" class="btn btn-primary-gold" (click)="copyRevealedPassword()">
+          {{ copied() ? '✓ Copié' : 'Copier le mot de passe' }}
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="revealedPassword.set(null)">J’ai transmis le mot de passe</button>
+      </div>
+    </section>
+  }
+
+  @if (api.error() && (selectedTab === 'students' || selectedTab === 'classes')) {
+    <div class="alert alert-error api-error" role="alert">
+      <span>{{ api.error() }}</span>
+      <button type="button" class="btn btn-sm btn-secondary" (click)="reload()" [disabled]="api.loading()">Réessayer</button>
+    </div>
+  }
+
+  @if (selectedTab === 'students') {
+    <div class="students-tab-view">
+      <form class="esm-card api-form-card" (ngSubmit)="saveStudent()" novalidate>
+        <h3 class="esm-card-title">{{ editingStudentId ? 'Modifier l’élève' : 'Ajouter un élève' }}</h3>
+        <div class="api-form-grid">
+          <label class="field-group">
+            <span>Prénom *</span>
+            <input class="form-input" name="firstName" maxlength="80" autocomplete="off" [(ngModel)]="studentForm.firstName" required />
+          </label>
+          <label class="field-group">
+            <span>Nom *</span>
+            <input class="form-input" name="lastName" maxlength="80" autocomplete="off" [(ngModel)]="studentForm.lastName" required />
+          </label>
+          <label class="field-group">
+            <span>Prénom en arabe</span>
+            <input class="form-input arabic-input" name="firstNameAr" maxlength="80" autocomplete="off" dir="rtl" lang="ar"
+                   placeholder="الاسم" [(ngModel)]="studentForm.firstNameAr" />
+          </label>
+          <label class="field-group">
+            <span>Nom en arabe</span>
+            <input class="form-input arabic-input" name="lastNameAr" maxlength="80" autocomplete="off" dir="rtl" lang="ar"
+                   placeholder="اللقب" [(ngModel)]="studentForm.lastNameAr" />
+          </label>
+          <label class="field-group">
+            <span>Classe *</span>
+            <select class="form-select" name="classId" [(ngModel)]="studentForm.classId" required>
+              <option value="">— Choisir —</option>
+              @for (cls of sortedClasses(); track cls.id) {
+                <option [value]="cls.id">{{ cls.name }}</option>
+              }
+            </select>
+          </label>
+          <label class="field-group">
+            <span>Genre</span>
+            <select class="form-select" name="gender" [(ngModel)]="studentForm.gender">
+              <option value="F">Fille</option>
+              <option value="M">Garçon</option>
+            </select>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary-gold" [disabled]="busy() !== null || !api.loaded()">
+              @if (busy() === 'student') { <span class="btn-spinner" aria-hidden="true"></span> }
+              {{ editingStudentId ? 'Enregistrer' : 'Ajouter' }}
+            </button>
+            @if (editingStudentId) {
+              <button type="button" class="btn btn-outline-gold" (click)="cancelStudentEdit()">Annuler</button>
+            }
+          </div>
+        </div>
+        @if (studentError()) {
+          <div class="alert alert-error" role="alert">{{ studentError() }}</div>
+        }
+      </form>
+
+      <div class="esm-card">
+        <div class="list-toolbar">
+          <input class="form-input" type="search" placeholder="Rechercher un élève…" aria-label="Rechercher un élève"
+                 [ngModel]="studentFilter()" (ngModelChange)="studentFilter.set($event)" />
+          <select class="form-select" aria-label="Filtrer par classe" [ngModel]="classFilter()" (ngModelChange)="classFilter.set($event)">
+            <option value="">Toutes les classes</option>
+            @for (cls of sortedClasses(); track cls.id) {
+              <option [value]="cls.id">{{ cls.name }} ({{ cls.student_count }})</option>
+            }
+          </select>
+        </div>
+
+        <div class="esm-table-container">
+          <table class="esm-table cards-on-mobile">
+            <thead>
+              <tr>
+                <th scope="col">Élève</th>
+                <th scope="col">Classe</th>
+                <th scope="col">Genre</th>
+                <th scope="col" class="col-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (api.loading() && !api.loaded()) {
+                <tr><td colspan="4" class="empty-cell">Chargement…</td></tr>
+              } @else {
+                @for (student of filteredStudents(); track student.id) {
+                  <tr [class.row-editing]="editingStudentId === student.id">
+                    <td data-label="Élève">
+                      <strong>{{ student.first_name }} {{ student.last_name }}</strong>
+                      @if (student.first_name_ar || student.last_name_ar) {
+                        <small class="arabic-name" dir="rtl" lang="ar">{{ student.first_name_ar }} {{ student.last_name_ar }}</small>
+                      } @else {
+                        <small class="missing-ar">Nom arabe à compléter</small>
+                      }
+                    </td>
+                    <td data-label="Classe">{{ student.class_name || '—' }}</td>
+                    <td data-label="Genre">{{ student.gender === 'M' ? 'Garçon' : student.gender === 'F' ? 'Fille' : '—' }}</td>
+                    <td class="col-actions">
+                      <button type="button" class="btn btn-sm btn-outline-gold" (click)="editStudent(student)"
+                              [attr.aria-label]="'Modifier ' + student.first_name + ' ' + student.last_name">Modifier</button>
+                      <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeStudent(student)" [disabled]="busy() !== null"
+                              [attr.aria-label]="'Supprimer ' + student.first_name + ' ' + student.last_name">Supprimer</button>
+                    </td>
+                  </tr>
+                } @empty {
+                  @if (api.loaded()) {
+                    <tr><td colspan="4" class="empty-cell">
+                      {{ api.students().length ? 'Aucun élève ne correspond à ce filtre.' : 'Aucun élève enregistré.' }}
+                    </td></tr>
+                  }
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (selectedTab === 'parents') {
+    <div class="parents-tab-view">
+      @if (parentsApi.error()) {
+        <div class="alert alert-error api-error" role="alert">
+          <span>{{ parentsApi.error() }}</span>
+          <button type="button" class="btn btn-sm btn-secondary" (click)="reload()" [disabled]="parentsApi.loading()">Réessayer</button>
+        </div>
+      }
+
+      @if (parentsApi.pendingCount() > 0) {
+        <div class="alert alert-info api-error" role="status">
+          <span>{{ parentsApi.pendingCount() }} parent(s) inscrit(s) en ligne attendent la validation de leur demande.</span>
+          <a routerLink="/admin/link-requests" class="btn btn-sm btn-primary-gold">Traiter les demandes</a>
+        </div>
+      }
+
+      <form class="esm-card api-form-card" (ngSubmit)="saveParent()" novalidate>
+        <h3 class="esm-card-title">{{ editingParentId ? 'Modifier le parent' : 'Créer un compte parent' }}</h3>
+        <div class="api-form-grid">
+          <label class="field-group">
+            <span>Nom complet *</span>
+            <input class="form-input" name="parentName" maxlength="120" autocomplete="off" [(ngModel)]="parentForm.fullName" required />
+          </label>
+          <label class="field-group">
+            <span>Email (identifiant) *</span>
+            <input class="form-input" type="email" name="parentEmail" maxlength="160" autocomplete="off" [(ngModel)]="parentForm.email" required />
+          </label>
+          <label class="field-group">
+            <span>Téléphone</span>
+            <input class="form-input" type="tel" name="parentPhone" maxlength="30" autocomplete="off" [(ngModel)]="parentForm.phone" />
+          </label>
+          @if (!editingParentId) {
+            <label class="field-group">
+              <span>Enfant à rattacher</span>
+              <select class="form-select" name="firstChild" [(ngModel)]="parentFirstChild.studentId">
+                <option value="">— Plus tard —</option>
+                @for (st of api.students(); track st.id) {
+                  <option [value]="st.id">{{ st.first_name }} {{ st.last_name }} ({{ st.class_name || '—' }})</option>
+                }
+              </select>
+            </label>
+            @if (parentFirstChild.studentId) {
+              <label class="field-group">
+                <span>Lien de parenté</span>
+                <select class="form-select" name="firstChildRelationship" [(ngModel)]="parentFirstChild.relationship">
+                  @for (rel of relationships; track rel) {
+                    <option [value]="rel">{{ relationshipLabels[rel] }}</option>
+                  }
+                </select>
+              </label>
+            }
+          }
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary-gold" [disabled]="parentBusy() !== null || !parentsApi.loaded()">
+              @if (parentBusy() === 'form') { <span class="btn-spinner" aria-hidden="true"></span> }
+              {{ editingParentId ? 'Enregistrer' : 'Créer le compte' }}
+            </button>
+            @if (editingParentId) {
+              <button type="button" class="btn btn-outline-gold" (click)="cancelParentEdit()">Annuler</button>
+            }
+          </div>
+        </div>
+        @if (!editingParentId) {
+          <p class="form-hint">
+            Pour un parent reçu à l’accueil. Un mot de passe provisoire est généré et affiché une seule fois.
+            Les parents qui s’inscrivent en ligne passent par « Inscriptions Parents ».
+          </p>
+        }
+        @if (parentError()) {
+          <div class="alert alert-error" role="alert">{{ parentError() }}</div>
+        }
+      </form>
+
+      <div class="esm-card">
+        <div class="list-toolbar">
+          <input class="form-input" type="search" placeholder="Rechercher un parent ou un enfant…" aria-label="Rechercher un parent ou un enfant"
+                 [ngModel]="parentFilter()" (ngModelChange)="parentFilter.set($event)" />
+          <label class="toggle-inline">
+            <input type="checkbox" [checked]="showInactiveParents()" (change)="showInactiveParents.set($any($event.target).checked)" />
+            Afficher les comptes désactivés
+          </label>
+        </div>
+
+        <div class="esm-table-container">
+          <table class="esm-table parents-table cards-on-mobile">
+            <thead>
+              <tr>
+                <th scope="col">Parent</th>
+                <th scope="col">Contact</th>
+                <th scope="col">Enfants rattachés</th>
+                <th scope="col">Statut</th>
+                <th scope="col" class="col-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (parentsApi.loading() && !parentsApi.loaded()) {
+                <tr><td colspan="5" class="empty-cell">Chargement…</td></tr>
+              } @else {
+                @for (parent of visibleParents(); track parent.id) {
+                  <tr [class.row-editing]="editingParentId === parent.id" [class.row-inactive]="parent.status === 'inactive'">
+                    <td><strong>{{ parent.full_name }}</strong></td>
+                    <td>
+                      <span class="text-sm">{{ parent.email || '—' }}</span>
+                      <small class="muted-line">{{ parent.phone || '' }}</small>
+                    </td>
+                    <td>
+                      <div class="child-chips">
+                        @for (child of parent.children; track child.student_id) {
+                          <span class="child-chip">
+                            <span class="chip-text">
+                              <span class="chip-name">{{ child.first_name }} {{ child.last_name }}</span>
+                              <small>{{ relationshipLabel(child.relationship) }}{{ child.class_name ? ' · ' + child.class_name : '' }}</small>
+                            </span>
+                            <button type="button" class="chip-remove" (click)="unlinkChild(parent, child)" [disabled]="parentBusy() !== null"
+                                    [attr.aria-label]="'Détacher ' + child.first_name + ' ' + child.last_name">×</button>
+                          </span>
+                        } @empty {
+                          <span class="text-slate-400 text-sm">Aucun</span>
+                        }
+                      </div>
+                    </td>
+                    <td>
+                      @switch (parent.status) {
+                        @case ('pending') { <span class="badge badge-yellow">En attente de validation</span> }
+                        @case ('inactive') { <span class="badge badge-coral">Désactivé</span> }
+                        @default {
+                          @if (parent.must_change_password) {
+                            <span class="badge badge-yellow" title="Le parent ne s’est pas encore connecté avec son propre mot de passe">Mot de passe provisoire</span>
+                          } @else {
+                            <span class="badge badge-mint">Actif</span>
+                          }
+                        }
+                      }
+                    </td>
+                    <td class="col-actions">
+                      <div class="row-actions">
+                        @if (parent.status === 'pending') {
+                          <a routerLink="/admin/link-requests" class="btn btn-sm btn-primary-gold">Voir la demande</a>
+                        } @else {
+                          <button type="button" class="btn btn-sm btn-outline-gold" (click)="beginEditParent(parent)"
+                                  [attr.aria-label]="'Modifier ' + parent.full_name">Modifier</button>
+                          @if (parent.active) {
+                            <button type="button" class="btn btn-sm btn-outline-gold" (click)="openLinkChild(parent)"
+                                    [attr.aria-expanded]="linkingParentId === parent.id"
+                                    [attr.aria-label]="'Rattacher un enfant à ' + parent.full_name">+ Enfant</button>
+                            <button type="button" class="btn btn-sm btn-outline-gold" (click)="resetParentPassword(parent)" [disabled]="parentBusy() !== null"
+                                    [attr.aria-label]="'Réinitialiser le mot de passe de ' + parent.full_name">Réinitialiser</button>
+                          }
+                          <button type="button" class="btn btn-sm" [class.btn-outline-danger]="parent.active" [class.btn-outline-gold]="!parent.active"
+                                  (click)="toggleParentActive(parent)" [disabled]="parentBusy() !== null"
+                                  [attr.aria-label]="(parent.active ? 'Désactiver ' : 'Réactiver ') + parent.full_name">
+                            {{ parent.active ? 'Désactiver' : 'Réactiver' }}
+                          </button>
+                        }
+                        </div>
+                    </td>
+                  </tr>
+                  @if (linkingParentId === parent.id) {
+                    <tr class="link-row">
+                      <td colspan="5">
+                        <form class="link-child-form" (ngSubmit)="linkChild(parent)" novalidate>
+                          <strong>Rattacher un enfant à {{ parent.full_name }}</strong>
+                          <select class="form-select" name="linkStudent" aria-label="Élève" [(ngModel)]="linkForm.studentId">
+                            <option value="">— Choisir un élève —</option>
+                            @for (st of linkableStudents(parent); track st.id) {
+                              <option [value]="st.id">{{ st.first_name }} {{ st.last_name }} ({{ st.class_name || '—' }})</option>
+                            }
+                          </select>
+                          <select class="form-select" name="linkRelationship" aria-label="Lien de parenté" [(ngModel)]="linkForm.relationship">
+                            @for (rel of relationships; track rel) {
+                              <option [value]="rel">{{ relationshipLabels[rel] }}</option>
+                            }
+                          </select>
+                          <button type="submit" class="btn btn-sm btn-primary-gold" [disabled]="parentBusy() !== null">
+                            @if (parentBusy() === parent.id) { <span class="btn-spinner" aria-hidden="true"></span> }
+                            Rattacher
+                          </button>
+                          <button type="button" class="btn btn-sm btn-secondary" (click)="linkingParentId = null">Annuler</button>
+                        </form>
+                      </td>
+                    </tr>
+                  }
+                } @empty {
+                  @if (parentsApi.loaded()) {
+                    <tr><td colspan="5" class="empty-cell">
+                      {{ parentsApi.parents().length ? 'Aucun parent ne correspond à cette recherche.' : 'Aucun compte parent.' }}
+                    </td></tr>
+                  }
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (selectedTab === 'staff') {
+    <div class="staff-tab-view">
+      @if (staffApi.error()) {
+        <div class="alert alert-error api-error" role="alert">
+          <span>{{ staffApi.error() }}</span>
+          <button type="button" class="btn btn-sm btn-secondary" (click)="reload()" [disabled]="staffApi.loading()">Réessayer</button>
+        </div>
+      }
+
+      <form class="esm-card api-form-card" (ngSubmit)="saveStaff()" novalidate>
+        <h3 class="esm-card-title">{{ editingStaffId ? 'Modifier un membre du personnel' : 'Ajouter un membre du personnel' }}</h3>
+        <div class="api-form-grid">
+          <label class="field-group">
+            <span>Nom complet *</span>
+            <input class="form-input" name="staffName" maxlength="120" autocomplete="off" [(ngModel)]="staffForm.fullName" required />
+          </label>
+          <label class="field-group">
+            <span>Email (identifiant) *</span>
+            <input class="form-input" type="email" name="staffEmail" maxlength="160" autocomplete="off" [(ngModel)]="staffForm.email" required />
+          </label>
+          <label class="field-group">
+            <span>Téléphone</span>
+            <input class="form-input" type="tel" name="staffPhone" maxlength="30" autocomplete="off" [(ngModel)]="staffForm.phone" />
+          </label>
+          <label class="field-group">
+            <span>Rôle *</span>
+            <select class="form-select" name="staffRole" [(ngModel)]="staffForm.role"
+                    [disabled]="!!editingStaffId && editingStaffId === auth.currentUser()?.id">
+              @for (role of staffRoles; track role) {
+                <option [value]="role">{{ roleLabels[role] }}</option>
+              }
+            </select>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary-gold" [disabled]="staffBusy() !== null || !staffApi.loaded()">
+              @if (staffBusy() === 'form') { <span class="btn-spinner" aria-hidden="true"></span> }
+              {{ editingStaffId ? 'Enregistrer' : 'Créer le compte' }}
+            </button>
+            @if (editingStaffId) {
+              <button type="button" class="btn btn-outline-gold" (click)="cancelStaffEdit()">Annuler</button>
+            }
+          </div>
+        </div>
+        @if (!editingStaffId) {
+          <p class="form-hint">Aucun mot de passe à saisir : un mot de passe provisoire est généré et affiché une seule fois.</p>
+        }
+        @if (staffError()) {
+          <div class="alert alert-error" role="alert">{{ staffError() }}</div>
+        }
+      </form>
+
+      <div class="esm-card">
+        <div class="list-toolbar staff-toolbar">
+          <strong>{{ staffApi.activeCount() }} compte{{ staffApi.activeCount() > 1 ? 's' : '' }} actif{{ staffApi.activeCount() > 1 ? 's' : '' }}</strong>
+          <label class="toggle-inline">
+            <input type="checkbox" [checked]="showInactiveStaff()" (change)="showInactiveStaff.set($any($event.target).checked)" />
+            Afficher les comptes désactivés
+          </label>
+        </div>
+
+        <div class="esm-table-container">
+          <table class="esm-table cards-on-mobile">
+            <thead>
+              <tr>
+                <th scope="col">Personne</th>
+                <th scope="col">Rôle</th>
+                <th scope="col">Contact</th>
+                <th scope="col">Statut</th>
+                <th scope="col" class="col-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (staffApi.loading() && !staffApi.loaded()) {
+                <tr><td colspan="5" class="empty-cell">Chargement…</td></tr>
+              } @else {
+                @for (member of visibleStaff(); track member.id) {
+                  <tr [class.row-editing]="editingStaffId === member.id" [class.row-inactive]="!member.active">
+                    <td>
+                      <strong>{{ member.full_name }}</strong>
+                      @if (isSelf(member)) { <span class="badge badge-gold">vous</span> }
+                      @if (member.is_super_admin) { <span class="badge badge-slate">super-admin</span> }
+                    </td>
+                    <td>{{ roleLabels[member.role] }}</td>
+                    <td>
+                      <span class="text-sm">{{ member.email || '—' }}</span>
+                      <small class="muted-line">{{ member.phone || '' }}</small>
+                    </td>
+                    <td>
+                      @if (!member.active) {
+                        <span class="badge badge-coral">Désactivé</span>
+                      } @else if (member.must_change_password) {
+                        <span class="badge badge-yellow" title="La personne ne s’est pas encore connectée avec son propre mot de passe">Mot de passe provisoire</span>
+                      } @else {
+                        <span class="badge badge-mint">Actif</span>
+                      }
+                    </td>
+                    <td class="col-actions">
+                      @if (isLocked(member)) {
+                        <small class="text-slate-400">Géré par un super-admin</small>
+                      } @else {
+                        <button type="button" class="btn btn-sm btn-outline-gold" (click)="beginEditStaff(member)"
+                                [attr.aria-label]="'Modifier ' + member.full_name">Modifier</button>
+                        @if (!isSelf(member)) {
+                          @if (member.active) {
+                            <button type="button" class="btn btn-sm btn-outline-gold" (click)="resetStaffPassword(member)" [disabled]="staffBusy() !== null"
+                                    [attr.aria-label]="'Réinitialiser le mot de passe de ' + member.full_name">Réinitialiser</button>
+                          }
+                          <button type="button" class="btn btn-sm" [class.btn-outline-danger]="member.active" [class.btn-outline-gold]="!member.active"
+                                  (click)="toggleStaffActive(member)" [disabled]="staffBusy() !== null"
+                                  [attr.aria-label]="(member.active ? 'Désactiver ' : 'Réactiver ') + member.full_name">
+                            {{ member.active ? 'Désactiver' : 'Réactiver' }}
+                          </button>
+                        }
+                      }
+                    </td>
+                  </tr>
+                } @empty {
+                  @if (staffApi.loaded()) {
+                    <tr><td colspan="5" class="empty-cell">Aucun membre du personnel.</td></tr>
+                  }
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (selectedTab === 'classes') {
+    <div class="classes-tab-view">
+      <form class="esm-card api-form-card" (ngSubmit)="saveClass()" novalidate>
+        <h3 class="esm-card-title">{{ editingClassId ? 'Modifier la classe' : 'Ajouter une classe' }}</h3>
+        <div class="api-form-grid">
+          <label class="field-group">
+            <span>Nom de la classe *</span>
+            <input class="form-input" name="className" maxlength="40" placeholder="Ex : 3ème B" autocomplete="off" [(ngModel)]="classForm.name" required />
+          </label>
+          <label class="field-group">
+            <span>Niveau *</span>
+            <select class="form-select" name="levelId" [(ngModel)]="classForm.levelId" required>
+              <option value="">— Choisir —</option>
+              @for (level of schoolData.levels(); track level.id) {
+                <option [value]="level.id">{{ level.name_fr }}</option>
+              }
+            </select>
+          </label>
+          <fieldset class="teacher-picker">
+            <legend>Enseignants assignés</legend>
+            @for (teacher of api.teachers(); track teacher.id) {
+              <label class="teacher-option">
+                <input type="checkbox" [checked]="classForm.teacherIds.includes(teacher.id)"
+                       (change)="toggleTeacher(teacher.id, $any($event.target).checked)" />
+                {{ teacher.full_name }}
+              </label>
+            } @empty {
+              <small class="text-slate-400">Aucun enseignant actif.</small>
+            }
+          </fieldset>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary-gold" [disabled]="busy() !== null || !api.loaded()">
+              @if (busy() === 'class') { <span class="btn-spinner" aria-hidden="true"></span> }
+              {{ editingClassId ? 'Enregistrer' : 'Ajouter' }}
+            </button>
+            @if (editingClassId) {
+              <button type="button" class="btn btn-outline-gold" (click)="cancelClassEdit()">Annuler</button>
+            }
+          </div>
+        </div>
+        @if (classError()) {
+          <div class="alert alert-error" role="alert">{{ classError() }}</div>
+        }
+      </form>
+
+      @if (api.loading() && !api.loaded()) {
+        <div class="esm-card empty-cell">Chargement…</div>
+      }
+
+      <div class="classes-cards-grid">
+        @for (cls of sortedClasses(); track cls.id) {
+          <div class="esm-card class-box" [class.row-editing]="editingClassId === cls.id">
+            <div class="box-top">
+              <h3 class="name">{{ cls.name }}</h3>
+              <button type="button" class="badge badge-gold badge-link" (click)="showStudentsOf(cls)"
+                      [attr.aria-label]="'Voir les élèves de ' + cls.name">
+                {{ cls.student_count }} élève{{ cls.student_count > 1 ? 's' : '' }}
+              </button>
+            </div>
+            <p class="text-slate-500 text-sm">{{ getLevelName(cls.level_id ?? undefined) }}</p>
+            <div class="class-subjects-preview">
+              <small class="text-slate-600 font-bold">Enseignants de classe :</small>
+              <div class="badges-row">
+                @for (teacher of cls.teachers; track teacher.id) {
+                  <span class="badge badge-sky">{{ teacher.full_name }}</span>
+                } @empty {
+                  <span class="badge badge-slate">Aucun enseignant assigné</span>
+                }
+              </div>
+            </div>
+            <div class="class-actions">
+              <button type="button" class="btn btn-sm btn-outline-gold" (click)="editClass(cls)">Modifier</button>
+              <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeClass(cls)" [disabled]="busy() !== null"
+                      [title]="cls.student_count > 0 ? 'Videz la classe avant de la supprimer' : ''">Supprimer</button>
+            </div>
+          </div>
+        } @empty {
+          @if (api.loaded()) {
+            <div class="esm-card empty-cell">Aucune classe. Créez la première ci-dessus.</div>
+          }
+        }
+      </div>
+    </div>
+  }
+
+  <div *ngIf="selectedTab === 'subjects'" class="subjects-tab-view">
+    <div class="esm-card subject-editor">
+      <div class="subject-editor-header">
+        <div>
+          <span class="section-kicker">Programme scolaire</span>
+          <h3 class="esm-card-title">{{ subjectEditForm.id ? 'Modifier la matière' : 'Ajouter une matière' }}</h3>
+        </div>
+        <button *ngIf="subjectEditForm.id" type="button" class="btn btn-outline-gold" (click)="cancelSubjectEdit()">Annuler</button>
+      </div>
+
+      <div class="subject-form-grid">
+        <label class="field-group">
+          <span>Domaine</span>
+          <select [value]="subjectEditForm.id ? subjectEditForm.domain_id : subjectForm.domain_id"
+            (change)="subjectEditForm.id ? (subjectEditForm.domain_id = $any($event.target).value) : (subjectForm.domain_id = $any($event.target).value)">
+            <option *ngFor="let domain of schoolData.domains()" [value]="domain.id">{{ domain.name_fr }}</option>
+          </select>
+        </label>
+
+        <label class="field-group">
+          <span>Nom français</span>
+          <input type="text" placeholder="Ex. Mathématiques"
+            [value]="subjectEditForm.id ? subjectEditForm.name_fr : subjectForm.name_fr"
+            (input)="subjectEditForm.id ? (subjectEditForm.name_fr = $any($event.target).value) : (subjectForm.name_fr = $any($event.target).value)" />
+        </label>
+
+        <label class="field-group">
+          <span>Nom arabe</span>
+          <input type="text" dir="rtl" placeholder="مثال: الرياضيات"
+            [value]="subjectEditForm.id ? subjectEditForm.name_ar : subjectForm.name_ar"
+            (input)="subjectEditForm.id ? (subjectEditForm.name_ar = $any($event.target).value) : (subjectForm.name_ar = $any($event.target).value)" />
+        </label>
+
+        <label class="field-group">
+          <span>Position</span>
+          <input type="number" min="1"
+            [value]="subjectEditForm.id ? subjectEditForm.position : subjectForm.position"
+            (input)="subjectEditForm.id ? (subjectEditForm.position = +$any($event.target).value) : (subjectForm.position = +$any($event.target).value)" />
+        </label>
+
+        <label class="subject-type-toggle">
+          <input type="checkbox"
+            [checked]="subjectEditForm.id ? subjectEditForm.is_foreign_language : subjectForm.is_foreign_language"
+            (change)="subjectEditForm.id ? (subjectEditForm.is_foreign_language = $any($event.target).checked) : (subjectForm.is_foreign_language = $any($event.target).checked)" />
+          <span>
+            <strong>Langue étrangère</strong>
+            <small>Permet d’ajouter des sous-composantes</small>
+          </span>
+        </label>
+
+        <button type="button" class="btn btn-primary-gold subject-submit"
+          (click)="subjectEditForm.id ? saveSubjectUpdate() : addSubject()">
+          {{ subjectEditForm.id ? 'Enregistrer les modifications' : 'Ajouter la matière' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="esm-card subject-list-card">
+      <div class="subject-list-header">
+        <div>
+          <span class="section-kicker">Liste du programme</span>
+          <h3 class="esm-card-title">Matières ({{ schoolData.subjects().length }})</h3>
+        </div>
+      </div>
+
+      <div class="subject-domain-grid">
+        <section class="subject-domain" *ngFor="let domain of schoolData.domains()">
+          <header>
+            <div>
+              <span class="domain-index">{{ domain.position }}</span>
+              <h4>{{ domain.name_fr }}</h4>
+            </div>
+            <span class="badge badge-slate">{{ schoolData.subjects().length }}</span>
+          </header>
+
+          <div class="subject-row" *ngFor="let subject of schoolData.subjects()">
+            <ng-container *ngIf="subject.domain_id === domain.id">
+              <div class="subject-name">
+                <strong>{{ subject.name_fr }}</strong>
+                <span dir="rtl">{{ subject.name_ar }}</span>
+              </div>
+              <span class="badge" [ngClass]="subject.is_foreign_language ? 'badge-sky' : 'badge-mint'">
+                {{ subject.is_foreign_language ? 'Langue' : 'Générale' }}
+              </span>
+              <div class="subject-actions">
+                <button type="button" class="icon-action" title="Modifier" (click)="beginEditSubject(subject.id)">✎</button>
+                <button type="button" class="icon-action danger" title="Supprimer" (click)="deleteSubject(subject.id)">×</button>
+              </div>
+            </ng-container>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="selectedTab === 'levels'" class="levels-tab-view">
+    <div class="esm-card" style="margin-bottom: 1rem;">
+      <h3 class="esm-card-title">{{ levelEditForm.id ? 'Modifier un niveau' : 'Ajouter un niveau' }}</h3>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; margin-top: 1rem;">
+        <input type="text" placeholder="Code" [value]="levelEditForm.id ? levelEditForm.code : levelForm.code" (input)="levelEditForm.id ? (levelEditForm.code = $any($event.target).value) : (levelForm.code = $any($event.target).value)" />
+        <input type="text" placeholder="Nom français" [value]="levelEditForm.id ? levelEditForm.name_fr : levelForm.name_fr" (input)="levelEditForm.id ? (levelEditForm.name_fr = $any($event.target).value) : (levelForm.name_fr = $any($event.target).value)" />
+        <input type="text" placeholder="Nom arabe" [value]="levelEditForm.id ? levelEditForm.name_ar : levelForm.name_ar" (input)="levelEditForm.id ? (levelEditForm.name_ar = $any($event.target).value) : (levelForm.name_ar = $any($event.target).value)" />
+        <input type="number" placeholder="Ordre" [value]="levelEditForm.id ? levelEditForm.position : levelForm.position" (input)="levelEditForm.id ? (levelEditForm.position = +($any($event.target).value || 1)) : (levelForm.position = +($any($event.target).value || 1))" />
+        <button class="btn btn-primary-gold" (click)="levelEditForm.id ? saveLevelUpdate() : addLevel()">{{ levelEditForm.id ? 'Enregistrer' : 'Ajouter' }}</button>
+        <button *ngIf="levelEditForm.id" class="btn btn-outline-gold" (click)="cancelLevelEdit()">Annuler</button>
+      </div>
+    </div>
+
+    <div class="esm-card">
+      <div class="esm-table-container">
+        <table class="esm-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Nom Français</th>
+              <th>Nom Arabe</th>
+              <th>Ordre</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let lvl of schoolData.levels()">
+              <td><code>{{ lvl.code }}</code></td>
+              <td><strong>{{ lvl.name_fr }}</strong></td>
+              <td dir="rtl">{{ lvl.name_ar }}</td>
+              <td>Niveau {{ lvl.position }}</td>
+              <td>
+                <button class="btn btn-sm btn-outline-gold" (click)="beginEditLevel(lvl.id)">Modifier</button>
+                <button class="btn btn-sm btn-outline-gold" style="margin-left: 0.4rem;" (click)="deleteLevel(lvl.id)">Supprimer</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

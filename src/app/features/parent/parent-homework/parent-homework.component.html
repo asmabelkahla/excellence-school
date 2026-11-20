@@ -1,0 +1,90 @@
+<div class="homework-page">
+  <header class="page-title">
+    <h2>📚 Devoirs</h2>
+    @if (auth.selectedStudent(); as child) {
+      <p>{{ child.first_name }} · {{ child.class_name }} — <strong>{{ homework.pendingCount() }}</strong> à faire</p>
+    }
+  </header>
+
+  @if (toast()) { <div class="alert alert-success" role="status">{{ toast() }}</div> }
+  @if (error() || homework.childError()) { <div class="alert alert-error" role="alert">{{ error() || homework.childError() }}</div> }
+
+  <!-- Invitation to get notified of each new homework -->
+  @switch (notifications.pushState()) {
+    @case ('off') {
+      <div class="notify-card">
+        <span class="notify-icon" aria-hidden="true">🔔</span>
+        <span class="notify-text"><strong>Soyez prévenu(e) à chaque nouveau devoir</strong>
+          <small>Une notification arrive sur ce téléphone, même application fermée.</small></span>
+        <button type="button" class="btn btn-sm btn-primary-gold" (click)="enablePush()" [disabled]="pushBusy()">Activer</button>
+      </div>
+    }
+    @case ('needs-install') {
+      <div class="notify-card">
+        <span class="notify-icon" aria-hidden="true">📲</span>
+        <span class="notify-text"><strong>Recevez une notification à chaque devoir</strong>
+          <small>Sur iPhone, installez d’abord l’application sur l’écran d’accueil.</small></span>
+        <a routerLink="/pwa-install" class="btn btn-sm btn-primary-gold">Comment ?</a>
+      </div>
+    }
+  }
+
+  @if (!auth.selectedStudent()) {
+    <div class="esm-card empty">
+      <span aria-hidden="true">👨‍👩‍👧</span>
+      <p>Aucun enfant rattaché à votre compte pour le moment.</p>
+      <a routerLink="/parent/dashboard" class="btn btn-secondary">Mes enfants</a>
+    </div>
+  } @else if (homework.childLoading() && !homework.childHomework().length) {
+    <div class="esm-card empty"><p>Chargement des devoirs…</p></div>
+  } @else {
+    @for (g of groups(); track g.key) {
+      <section class="hw-group" [attr.aria-labelledby]="'g-' + g.key">
+        <h3 [id]="'g-' + g.key" [class.late]="g.key === 'late'">{{ g.label }} <span class="count">{{ g.items.length }}</span></h3>
+        @for (h of g.items; track h.id) {
+          <ng-container [ngTemplateOutlet]="item" [ngTemplateOutletContext]="{ $implicit: h }"></ng-container>
+        }
+      </section>
+    } @empty {
+      <div class="esm-card empty all-done">
+        <span aria-hidden="true">🎉</span>
+        <p><strong>Aucun devoir à faire.</strong></p>
+        <p class="muted">Vous recevrez une notification dès qu’un enseignant en publiera un.</p>
+      </div>
+    }
+
+    @if (doneList().length) {
+      <button type="button" class="link-button done-toggle" (click)="showDone.set(!showDone())" [attr.aria-expanded]="showDone()">
+        {{ showDone() ? 'Masquer' : 'Voir' }} les devoirs faits ({{ doneList().length }})
+      </button>
+      @if (showDone()) {
+        <section class="hw-group">
+          @for (h of doneList(); track h.id) {
+            <ng-container [ngTemplateOutlet]="item" [ngTemplateOutletContext]="{ $implicit: h }"></ng-container>
+          }
+        </section>
+      }
+    }
+  }
+</div>
+
+<ng-template #item let-h>
+  <article class="hw-item" [class.done]="h.done">
+    <button type="button" class="check" [class.checked]="h.done" (click)="toggle(h)" role="checkbox" [attr.aria-checked]="h.done"
+            [attr.aria-label]="(h.done ? 'Marquer comme non fait : ' : 'Marquer comme fait : ') + h.title">
+      @if (h.done) { ✓ }
+    </button>
+    <div class="hw-body" (click)="toggleDetails(h.id)">
+      <div class="hw-meta">
+        <span class="subject">{{ h.subject_name }}</span>
+        @if (isNew(h) && !h.done) { <span class="new-tag">Nouveau</span> }
+        <span class="due">{{ dueText(h.due_date) }}</span>
+      </div>
+      <h4>{{ h.title }}</h4>
+      @if (h.description) {
+        <p class="desc" [class.clamped]="expanded() !== h.id">{{ h.description }}</p>
+      }
+      <small class="teacher">{{ h.teacher_name }} · pour le {{ h.due_date | date:'EEEE dd/MM' }}</small>
+    </div>
+  </article>
+</ng-template>

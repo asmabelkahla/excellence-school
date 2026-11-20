@@ -1,0 +1,122 @@
+<div class="grading-page">
+  <header class="esm-card grading-header">
+    <div>
+      <h2 class="esm-card-title">✏️ Saisie des notes</h2>
+      <p class="text-slate-500">Les notes restent internes jusqu’à la publication du bulletin par l’administration.</p>
+    </div>
+    <div class="trimester-switch" role="tablist" aria-label="Trimestre">
+      @for (t of trimesters; track t) {
+        <button type="button" role="tab" [class.active]="trimester() === t" [attr.aria-selected]="trimester() === t"
+                (click)="changeTrimester(t)">T{{ t }}</button>
+      }
+    </div>
+  </header>
+
+  @if (loading()) {
+    <div class="esm-card empty-box">Chargement de vos matières…</div>
+  } @else if (!assignments().length) {
+    <div class="esm-card empty-box">
+      <strong>Aucune matière ne vous est attribuée.</strong>
+      <p class="text-slate-500">L’administration associe chaque matière d’une classe à un enseignant.</p>
+    </div>
+  } @else {
+    <div class="esm-card selectors">
+      <label class="field">
+        <span>Classe</span>
+        <select class="form-select" [ngModel]="classId()" (ngModelChange)="changeClass($event)">
+          @for (c of classes(); track c.id) { <option [value]="c.id">{{ c.name }}</option> }
+        </select>
+      </label>
+      <label class="field">
+        <span>Matière</span>
+        <select class="form-select" [ngModel]="classSubjectId()" (ngModelChange)="changeSubject($event)">
+          @for (a of subjectsOfClass(); track a.id) {
+            <option [value]="a.id">{{ a.subject_name }}{{ a.component_count ? ' (' + a.component_count + ' composantes)' : '' }}</option>
+          }
+        </select>
+      </label>
+      @if (current(); as a) {
+        <div class="subject-meta">
+          <span class="badge badge-gold">Coefficient {{ a.coefficient }}</span>
+          @if (a.domain_name) { <span class="badge badge-slate">{{ a.domain_name }}</span> }
+        </div>
+      }
+    </div>
+
+    @if (notice()) { <div class="alert alert-success" role="status">✓ {{ notice() }}</div> }
+    @if (error()) { <div class="alert alert-error" role="alert">{{ error() }}</div> }
+
+    @if (sheet(); as s) {
+      <div class="stats-bar" aria-live="polite">
+        <span><strong>{{ stats().count }}</strong> / {{ stats().total }} élèves notés</span>
+        <span>Moyenne <strong>{{ stats().avg != null ? (stats().avg | number:'1.2-2') : '—' }}</strong></span>
+        <span>Min <strong>{{ stats().min != null ? (stats().min | number:'1.2-2') : '—' }}</strong></span>
+        <span>Max <strong>{{ stats().max != null ? (stats().max | number:'1.2-2') : '—' }}</strong></span>
+        @if (lockedCount()) { <span class="locked-info">🔒 {{ lockedCount() }} bulletin(s) déjà publié(s)</span> }
+      </div>
+
+      <form class="esm-card sheet-card" (ngSubmit)="save()" novalidate>
+        <div class="esm-table-container">
+          <table class="esm-table grade-table" [class.loading]="sheetLoading()">
+            <thead>
+              <tr>
+                <th scope="col" class="col-student">Élève</th>
+                @for (c of s.components; track c.id) {
+                  <th scope="col" class="col-score">{{ c.name_fr }}<small>/ {{ c.max_score }}</small></th>
+                }
+                @if (s.components.length > 1) { <th scope="col" class="col-score">Sur 20</th> }
+                <th scope="col" class="col-remark">Observation</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows(); track row.studentId) {
+                <tr [class.row-locked]="row.locked">
+                  <th scope="row" class="col-student">
+                    {{ row.name }}
+                    @if (row.locked) { <small class="lock-tag" title="Bulletin publié : notes figées">🔒 publié</small> }
+                  </th>
+                  @for (c of s.components; track c.id) {
+                    <td class="col-score">
+                      <input class="score-input" inputmode="decimal" autocomplete="off"
+                             [name]="row.studentId + '_' + (c.id || 'note')"
+                             [(ngModel)]="row.values[c.id]" (ngModelChange)="touch()" [disabled]="row.locked"
+                             [attr.aria-label]="c.name_fr + ' de ' + row.name + ', sur ' + c.max_score"
+                             [attr.aria-invalid]="cellError(row, c.id, c.max_score) ? true : null"
+                             [attr.title]="cellError(row, c.id, c.max_score)" />
+                    </td>
+                  }
+                  @if (s.components.length > 1) {
+                    <td class="col-score total-cell">
+                      @if (score20(row); as total) { <strong>{{ total | number:'1.2-2' }}</strong> }
+                      @else { <small class="text-slate-400">{{ filledCount(row) }}/{{ s.components.length }}</small> }
+                    </td>
+                  }
+                  <td class="col-remark">
+                    <input class="form-input remark-input" maxlength="500" autocomplete="off"
+                           [name]="row.studentId + '_remark'" [(ngModel)]="row.remark" (ngModelChange)="touch()"
+                           [disabled]="row.locked" placeholder="Facultatif"
+                           [attr.aria-label]="'Observation pour ' + row.name" />
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td [attr.colspan]="s.components.length + 3" class="empty-cell">Aucun élève dans cette classe.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="save-bar">
+          <span class="save-state" aria-live="polite">
+            @if (invalidCount()) { <span class="text-coral">⚠ {{ invalidCount() }} note(s) hors barème</span> }
+            @else if (dirty()) { ● Modifications non enregistrées }
+            @else { ✓ Tout est enregistré }
+          </span>
+          <button type="submit" class="btn btn-primary-gold" [disabled]="!dirty() || invalidCount() > 0 || saving()">
+            @if (saving()) { <span class="btn-spinner" aria-hidden="true"></span> }
+            Enregistrer
+          </button>
+        </div>
+      </form>
+    }
+  }
+</div>

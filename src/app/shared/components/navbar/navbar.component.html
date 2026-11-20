@@ -1,0 +1,200 @@
+<header class="app-navbar no-print">
+  <div class="navbar-brand">
+    <a routerLink="/" class="brand-link">
+      <img src="assets/logo-excellence-school-monastir.jpg" alt="Excellence School Monastir" class="brand-logo" onerror="this.src='logo.jpg'" />
+      <div class="brand-text">
+        <span class="brand-name">{{ i18n.t('appName') }}</span>
+        <span class="brand-subtitle">{{ i18n.t('schoolSubtitle') }} • Monastir</span>
+      </div>
+    </a>
+  </div>
+
+  <div class="navbar-center" *ngIf="auth.isParent() && auth.parentChildren().length > 0">
+    <div class="child-switcher">
+      <span class="child-switcher-label">👧👦 {{ i18n.t('child') }}:</span>
+      <div class="child-pills">
+        <button
+          *ngFor="let child of auth.parentChildren()"
+          (click)="onSelectStudent(child)"
+          class="child-pill"
+          [class.active]="auth.selectedStudent()?.id === child.id"
+        >
+          <span class="child-avatar">{{ child.gender === 'F' ? '👧' : '👦' }}</span>
+          <span class="child-name">
+            {{ i18n.isRtl() && child.first_name_ar ? child.first_name_ar : child.first_name }}
+          </span>
+          <span class="child-class badge badge-gold">{{ child.class_name }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="navbar-actions">
+    <button (click)="toggleLanguage()" class="lang-toggle-btn" title="Changer de langue / تغيير اللغة">
+      <span class="lang-flag">{{ i18n.currentLocale() === 'fr' ? '🇹🇳 العربية' : '🇫🇷 Français' }}</span>
+    </button>
+
+    <button (click)="openNotifications()" class="icon-btn" [attr.aria-label]="'Notifications' + (notifications.unread() ? ', ' + notifications.unread() + ' non lue(s)' : '')">
+      <span class="bell-icon" aria-hidden="true">🔔</span>
+      <span class="badge-count" *ngIf="notifications.unread() > 0" aria-hidden="true">{{ notifications.unread() > 9 ? '9+' : notifications.unread() }}</span>
+    </button>
+
+    <div class="profile-menu-wrap" *ngIf="auth.currentUser() as user">
+      <button class="profile-trigger" (click)="toggleProfileMenu()">
+        <span class="profile-avatar">{{ user.full_name?.charAt(0)?.toUpperCase() || 'U' }}</span>
+        <span class="profile-meta">
+          <strong>{{ user.full_name }}</strong>
+          <small>{{ user.role }}</small>
+        </span>
+        <span class="profile-chevron">▾</span>
+      </button>
+
+      <div class="profile-dropdown" *ngIf="showProfileMenu">
+        <div class="dropdown-section">
+          <span class="dropdown-label">Mon espace</span>
+          <button class="menu-item" type="button" (click)="openProfileModal()">Profil</button>
+          <button class="menu-item" type="button" (click)="openSettingsModal()">Paramètres</button>
+          <a class="menu-item" routerLink="/change-password" (click)="showProfileMenu = false">Changer mon mot de passe</a>
+
+          <div class="children-list" *ngIf="auth.isParent() && auth.parentChildren().length > 0">
+            <span class="dropdown-label">Changer d’enfant</span>
+            <button
+              *ngFor="let child of auth.parentChildren()"
+              type="button"
+              class="menu-item child-menu-item"
+              [class.active]="auth.selectedStudent()?.id === child.id"
+              (click)="onSelectStudent(child)"
+            >
+              <span>{{ child.first_name }} {{ child.last_name }}</span>
+              <small>{{ child.class_name }}</small>
+            </button>
+          </div>
+
+          <button class="menu-item danger" type="button" (click)="logout()">Déconnexion</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Profile Modal -->
+<div class="esm-modal-backdrop" *ngIf="showProfileModal" (click)="showProfileModal = false">
+  <div class="esm-modal-container" (click)="$event.stopPropagation()">
+    <div class="esm-card-header">
+      <h3 class="esm-card-title">👤 Profil</h3>
+      <button class="close-btn" (click)="showProfileModal = false">✕</button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Nom complet</label>
+      <input [(ngModel)]="profileForm.full_name" name="profile_full_name" class="form-input" type="text" />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Téléphone</label>
+      <input [(ngModel)]="profileForm.phone" name="profile_phone" class="form-input" type="tel" />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input [(ngModel)]="profileForm.email" name="profile_email" class="form-input" type="email" />
+    </div>
+
+    <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem;">
+      <button type="button" class="btn btn-secondary" (click)="showProfileModal = false">{{ i18n.t('cancel') }}</button>
+      <button type="button" class="btn btn-primary-gold" (click)="saveProfile()">{{ i18n.t('save') }}</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="esm-modal-backdrop" *ngIf="showSettingsModal" (click)="showSettingsModal = false">
+  <div class="esm-modal-container" (click)="$event.stopPropagation()">
+    <div class="esm-card-header">
+      <h3 class="esm-card-title">⚙️ Paramètres</h3>
+      <button class="close-btn" (click)="showSettingsModal = false">✕</button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Langue</label>
+      <select [(ngModel)]="settingsForm.locale" name="settings_locale" class="form-select">
+        <option value="fr">Français</option>
+        <option value="ar">العربية</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Notifications</label>
+      <label class="toggle-row" style="display: flex; align-items: center; justify-content: space-between; background: var(--slate-50); border: 1px solid var(--slate-200); border-radius: 10px; padding: 0.75rem 0.9rem;">
+        <span>Recevoir les notifications</span>
+        <input [(ngModel)]="settingsForm.notificationsEnabled" name="settings_notifications" type="checkbox" />
+      </label>
+    </div>
+
+    <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem;">
+      <button type="button" class="btn btn-secondary" (click)="showSettingsModal = false">{{ i18n.t('cancel') }}</button>
+      <button type="button" class="btn btn-primary-gold" (click)="saveSettings()">{{ i18n.t('save') }}</button>
+    </div>
+  </div>
+</div>
+
+<!-- Notifications panel -->
+<div class="esm-modal-backdrop" *ngIf="showNotificationsModal" (click)="showNotificationsModal = false">
+  <div class="esm-modal-container notif-panel" role="dialog" aria-modal="true" aria-labelledby="notif-title" (click)="$event.stopPropagation()">
+    <div class="esm-card-header">
+      <h3 class="esm-card-title" id="notif-title">🔔 Notifications</h3>
+      <button class="close-btn" (click)="showNotificationsModal = false" aria-label="Fermer">✕</button>
+    </div>
+
+    <!-- Push on this device -->
+    <div class="push-box" [attr.data-state]="notifications.pushState()">
+      @switch (notifications.pushState()) {
+        @case ('on') {
+          <span>📲 Notifications activées sur cet appareil.</span>
+          <button type="button" class="btn btn-sm btn-secondary" (click)="notifications.disablePush()">Désactiver</button>
+        }
+        @case ('off') {
+          <span>📲 Recevoir les devoirs et messages sur cet appareil, même application fermée.</span>
+          <button type="button" class="btn btn-sm btn-primary-gold" (click)="enablePush()" [disabled]="pushBusy">Activer</button>
+        }
+        @case ('needs-install') {
+          <span>📲 Sur iPhone, installez d’abord l’application sur l’écran d’accueil pour recevoir les notifications.</span>
+          <a routerLink="/pwa-install" class="btn btn-sm btn-primary-gold" (click)="showNotificationsModal = false">Comment ?</a>
+        }
+        @case ('denied') {
+          <span>🔕 Les notifications sont bloquées pour ce site dans les réglages du navigateur.</span>
+        }
+        @default {
+          <span>Ce navigateur ne permet pas les notifications push. Elles restent visibles ici.</span>
+        }
+      }
+      @if (pushError) { <small class="push-error" role="alert">{{ pushError }}</small> }
+    </div>
+
+    <div class="notif-toolbar">
+      <span>{{ notifications.unread() }} non lue(s)</span>
+      @if (notifications.unread() > 0) {
+        <button type="button" class="link-button" (click)="notifications.markRead()">Tout marquer comme lu</button>
+      }
+    </div>
+
+    <ul class="notif-list">
+      @for (notif of notifications.items(); track notif.id) {
+        <li>
+          <button type="button" class="notif-item" [class.unread]="!notif.read_at" (click)="openNotification(notif)">
+            <span class="notif-icon" aria-hidden="true">{{ notifIcon(notif.type) }}</span>
+            <span class="notif-content">
+              <span class="notif-title">{{ notif.title }}</span>
+              <span class="notif-body">{{ notif.body }}</span>
+              <small class="notif-date">{{ notif.created_at | date:'dd/MM HH:mm' }}</small>
+            </span>
+            @if (!notif.read_at) { <span class="notif-dot" aria-label="non lue"></span> }
+          </button>
+        </li>
+      } @empty {
+        <li class="notif-empty">Aucune notification pour le moment.</li>
+      }
+    </ul>
+  </div>
+</div>
+

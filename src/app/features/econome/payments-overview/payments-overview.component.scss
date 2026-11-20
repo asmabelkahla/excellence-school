@@ -1,0 +1,63 @@
+.payments-overview-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.overview-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+
+  .kpi-card {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    .kpi-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--slate-500);
+      text-transform: uppercase;
+    }
+
+    .kpi-val {
+      font-size: 1.65rem;
+      font-weight: 900;
+    }
+
+    .text-mint { color: var(--mint-primary); }
+    .text-coral { color: var(--coral-primary); }
+    .text-yellow { color: var(--yellow-primary); }
+  }
+}
+
+.filter-bar {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  flex-wrap: wrap;
+
+  .filter-group {
+    flex: 1;
+    min-width: 180px;
+
+    .form-label {
+      margin-bottom: 0.25rem;
+      font-size: 0.8rem;
+    }
+  }
+
+  .search-group {
+    flex: 2;
+  }
+}

@@ -1,0 +1,115 @@
+<div class="sheet-wrapper">
+  <!-- Toolbar -->
+  <div class="sheet-toolbar no-print">
+    <div class="status-indicator">
+      <span class="badge" [ngClass]="reportCard?.status === 'published' ? 'badge-mint' : 'badge-yellow'">{{ reportCard?.status === 'published' ? 'Fiche langues — publiée' : 'Fiche langues — brouillon' }}</span>
+      <span class="badge badge-gold">{{ reportCard?.content?.class_name || '—' }}</span>
+    </div>
+    <button (click)="printSheet()" class="btn btn-primary-gold">
+      🖨️ {{ i18n.t('downloadPdf') }}
+    </button>
+  </div>
+
+  <!-- A4 Document -->
+  <div #sheet class="print-page language-sheet">
+    <!-- Header with school brand and logo -->
+    <header class="sheet-header">
+      <img src="assets/logo-excellence-school-monastir.jpg" alt="Excellence School" class="sheet-logo" onerror="this.src='logo.jpg'" />
+      <div class="sheet-title-group">
+        <h1 class="school-name">EXCELLENCE SCHOOL MONASTIR</h1>
+        <div class="doc-title">FICHE D’ÉVALUATION DÉTAILLÉE DES LANGUES ÉTRANGÈRES</div>
+        <div class="arabic-doc-title" dir="rtl">بطاقة تقييم اللغات الأجنبية (الفرنسية والإنجليزية)</div>
+        <div class="period-info">
+          {{ reportCard?.trimester === 1 ? '1er' : reportCard?.trimester === 2 ? '2ème' : '3ème' }} Trimestre • Année Scolaire {{ reportCard?.content?.school_year || '2026-2027' }}
+        </div>
+      </div>
+    </header>
+
+    <!-- Student details -->
+    <div class="student-strip">
+      <div>
+        <span class="label">Élève :</span>
+        <strong>{{ reportCard?.content?.student_first_name || student?.first_name }} {{ reportCard?.content?.student_last_name || student?.last_name }}</strong>
+      </div>
+      <div>
+        <span class="label">Classe :</span>
+        <strong>{{ reportCard?.content?.class_name || student?.class_name || '—' }}</strong>
+      </div>
+      <div>
+        <span class="label">Effectif :</span>
+        <span>{{ (reportCard?.content?.class_size || reportCard?.class_size) ? (reportCard?.content?.class_size || reportCard?.class_size) + ' élèves' : '—' }}</span>
+      </div>
+    </div>
+
+    <!-- Language Details -->
+    <div class="languages-tables-container">
+      <div *ngFor="let lang of reportCard?.content?.languages_details" class="language-card">
+        <div class="language-card-header">
+          <div class="lang-title">
+            <strong>{{ lang.subject_name_fr }}</strong>
+            <span class="lang-ar" dir="rtl" *ngIf="lang.subject_name_ar">({{ lang.subject_name_ar }})</span>
+          </div>
+          <div class="lang-coeff">
+            Coefficient : <strong>{{ lang.coefficient }}</strong>
+          </div>
+        </div>
+
+        <table class="components-table">
+          <thead>
+            <tr>
+              <th style="width: 55%;">Sous-Matière / Compétence évaluée</th>
+              <th style="width: 25%; text-align: center;">Barème officiel</th>
+              <th style="width: 20%; text-align: center;">Note obtenue</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let cmp of lang.components">
+              <td class="cmp-name">{{ cmp.component_name_fr }}</td>
+              <td style="text-align: center;" class="text-slate-500">/ {{ cmp.max_score }}</td>
+              <td style="text-align: center;" class="cmp-score">
+                <strong>{{ cmp.score !== null ? cmp.score : '—' }}</strong>
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td><strong>TOTAL CUMULÉ</strong></td>
+              <td style="text-align: center;"><strong>/ {{ lang.total_max }}</strong></td>
+              <td style="text-align: center;" class="grand-total"><strong>{{ lang.total_score }}</strong></td>
+            </tr>
+            <tr class="final-score-row">
+              <td colspan="2">
+                <strong>NOTE RAMENÉE SUR 20 ({{ lang.subject_name_fr }}) :</strong>
+              </td>
+              <td style="text-align: center;" class="final-score-box">
+                <span>{{ lang.final_score_20 !== null ? (lang.final_score_20 | number:'1.2-2') : '—' }}</span> / 20
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div class="teacher-obs-box" *ngIf="lang.teacher_observation">
+          <div class="obs-title">Appréciation de l’enseignant(e) de {{ lang.subject_name_fr }} :</div>
+          <div class="obs-content">« {{ lang.teacher_observation }} »</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Signatures and Stamp Footer -->
+    <footer class="sheet-footer">
+      <div class="sig-col">
+        <span>Signature du Parent</span>
+        <div class="sig-space"></div>
+      </div>
+
+      <div class="sig-col stamp-col">
+        <div class="stamp-pill">Cachet Officiel Excellence School</div>
+      </div>
+
+      <div class="sig-col">
+        <span>L'Enseignante / La Direction</span>
+        <div class="sig-space signed">Mme Salma Kallel</div>
+      </div>
+    </footer>
+  </div>
+</div>

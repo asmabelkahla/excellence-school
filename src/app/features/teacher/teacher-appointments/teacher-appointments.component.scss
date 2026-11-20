@@ -1,0 +1,91 @@
+.teacher-appointments-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.teacher-appts-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.appts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.appt-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+
+  .card-header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+
+    .parent-info {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+
+      .p-avatar {
+        font-size: 2.25rem;
+      }
+
+      .parent-name {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: var(--slate-900);
+        margin: 0;
+      }
+
+      .student-label {
+        font-size: 0.85rem;
+        color: var(--slate-600);
+      }
+
+      .phone-tag {
+        font-size: 0.8rem;
+        display: block;
+        margin-top: 0.2rem;
+      }
+    }
+  }
+
+  .details-body {
+    background-color: var(--slate-50);
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--slate-200);
+    font-size: 0.95rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+
+    strong {
+      color: var(--slate-700);
+    }
+  }
+
+  .confirmed-notice {
+    margin-top: 0.5rem;
+    padding: 0.65rem 0.85rem;
+    background: var(--mint-light);
+    border-radius: var(--radius-sm);
+    color: var(--mint-primary);
+    font-weight: 700;
+  }
+
+  .action-footer {
+    display: flex;
+    gap: 0.5rem;
+    border-top: 1px solid var(--slate-100);
+    padding-top: 0.75rem;
+    flex-wrap: wrap;
+  }
+}

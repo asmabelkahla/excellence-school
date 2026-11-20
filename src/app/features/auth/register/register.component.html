@@ -1,0 +1,154 @@
+<div class="auth-shell">
+  <app-auth-brand-panel></app-auth-brand-panel>
+
+  <main class="auth-panel">
+    <div class="auth-topbar">
+      <button type="button" class="auth-lang-toggle" (click)="i18n.toggleLocale()">
+        {{ i18n.isRtl() ? 'Français' : 'العربية' }}
+      </button>
+    </div>
+
+    <div class="auth-card auth-card-wide">
+      <div class="auth-mobile-logo">
+        <img src="assets/logo-excellence-school-monastir.jpg" alt="" />
+        <strong>{{ i18n.t('appName') }}</strong>
+      </div>
+
+      @if (successMessage()) {
+        <section class="success-panel" role="status">
+          <div class="success-icon" aria-hidden="true">✓</div>
+          <h1 class="auth-title">Demande envoyée</h1>
+          <p>{{ successMessage() }}</p>
+          <ol class="next-steps">
+            <li>L’administration vérifie le lien avec le dossier de chaque enfant.</li>
+            <li>Votre compte est activé dès la validation.</li>
+            <li>Vous pourrez alors vous connecter avec votre email et votre mot de passe.</li>
+          </ol>
+          <a routerLink="/login" class="btn btn-primary-gold btn-block">{{ i18n.t('backToLogin') }}</a>
+        </section>
+      } @else {
+        <h1 class="auth-title">{{ i18n.t('registerTitle') }}</h1>
+        <p class="auth-subtitle">Créez votre compte et déclarez vos enfants. L’école validera votre demande.</p>
+
+        @if (errorMessage()) {
+          <div class="alert alert-error" role="alert">{{ errorMessage() }}</div>
+        }
+
+        <form (ngSubmit)="onSubmit()" novalidate>
+          <fieldset class="form-step">
+            <legend><span class="step-num">1</span> Vos coordonnées</legend>
+
+            <div class="form-group">
+              <label class="form-label" for="fullName">{{ i18n.t('fullName') }} *</label>
+              <input id="fullName" type="text" [(ngModel)]="fullName" name="fullName" class="form-input"
+                     placeholder="Ex : Monia Trabelsi" autocomplete="name" required
+                     [attr.aria-invalid]="submitted() && !fullName.trim()" />
+            </div>
+
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label" for="phone">{{ i18n.t('phoneNumber') }} *</label>
+                <input id="phone" type="tel" [(ngModel)]="phone" name="phone" class="form-input"
+                       placeholder="+216 98 000 000" autocomplete="tel" required
+                       [attr.aria-invalid]="submitted() && !phone.trim()" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="email">{{ i18n.t('email') }} *</label>
+                <input id="email" type="email" [(ngModel)]="email" name="email" class="form-input"
+                       placeholder="parent@domaine.tn" autocomplete="email" required
+                       [attr.aria-invalid]="submitted() && emailInvalid" />
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="form-group">
+                <label class="form-label" for="password">{{ i18n.t('password') }} *</label>
+                <input id="password" type="password" [(ngModel)]="password" name="password" class="form-input"
+                       autocomplete="new-password" aria-describedby="password-hint" required
+                       [attr.aria-invalid]="submitted() && passwordInvalid" />
+                <small id="password-hint" class="form-hint">{{ i18n.t('passwordHint') }}</small>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="confirmPassword">{{ i18n.t('confirmPassword') }} *</label>
+                <input id="confirmPassword" type="password" [(ngModel)]="confirmPassword" name="confirmPassword"
+                       class="form-input" autocomplete="new-password" required
+                       [attr.aria-invalid]="submitted() && confirmInvalid" />
+                @if (confirmPassword && confirmInvalid) {
+                  <small class="form-error">Les mots de passe ne correspondent pas.</small>
+                }
+              </div>
+            </div>
+
+            <div class="form-group">
+              <span class="form-label" id="relationship-label">{{ i18n.t('relationship') }}</span>
+              <div class="segmented" role="radiogroup" aria-labelledby="relationship-label">
+                @for (option of ['mere', 'pere', 'tuteur']; track option) {
+                  <label class="segmented-option" [class.active]="relationship === option">
+                    <input type="radio" name="relationship" [value]="option" [(ngModel)]="relationship" class="sr-only" />
+                    {{ option === 'mere' ? 'Mère' : option === 'pere' ? 'Père' : 'Tuteur / Tutrice' }}
+                  </label>
+                }
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="form-step">
+            <legend><span class="step-num">2</span> {{ i18n.t('childDeclaration') }}</legend>
+            <p class="form-hint step-hint">L’administration rattachera chaque enfant à son dossier scolaire.</p>
+
+            @for (child of children; track $index; let i = $index) {
+              <div class="child-card">
+                <div class="child-card-header">
+                  <span class="badge badge-gold">Enfant {{ i + 1 }}</span>
+                  @if (children.length > 1) {
+                    <button type="button" class="btn-remove" (click)="removeChildField(i)"
+                            [attr.aria-label]="'Retirer l’enfant ' + (i + 1)">Retirer</button>
+                  }
+                </div>
+                <div class="grid-3">
+                  <div class="form-group">
+                    <label class="form-label" [for]="'fn_' + i">{{ i18n.t('childFirstName') }} *</label>
+                    <input [id]="'fn_' + i" [attr.aria-label]="i18n.t('childFirstName') + ' ' + (i + 1)" type="text" [(ngModel)]="child.firstName" [name]="'fn_' + i" class="form-input"
+                           [attr.aria-invalid]="submitted() && !child.firstName.trim()" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" [for]="'ln_' + i">{{ i18n.t('childLastName') }} *</label>
+                    <input [id]="'ln_' + i" [attr.aria-label]="i18n.t('childLastName') + ' ' + (i + 1)" type="text" [(ngModel)]="child.lastName" [name]="'ln_' + i" class="form-input"
+                           [attr.aria-invalid]="submitted() && !child.lastName.trim()" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" [for]="'cls_' + i">{{ i18n.t('selectClass') }}</label>
+                    <select [id]="'cls_' + i" [attr.aria-label]="i18n.t('selectClass') + ' ' + (i + 1)" [(ngModel)]="child.classId" [name]="'cls_' + i" class="form-select">
+                      @for (c of schoolData.classes(); track c.id) {
+                        <option [value]="c.id">{{ c.name }}</option>
+                      }
+                    </select>
+                  </div>
+                </div>
+              </div>
+            }
+
+            @if (children.length < 10) {
+              <button type="button" (click)="addChildField()" class="btn btn-outline-gold btn-sm add-child">
+                {{ i18n.t('addChild') }}
+              </button>
+            }
+          </fieldset>
+
+          <button type="submit" class="btn btn-primary-gold btn-block" [disabled]="loading()">
+            @if (loading()) {
+              <span class="btn-spinner" aria-hidden="true"></span> Envoi…
+            } @else {
+              {{ i18n.t('submitRegistration') }}
+            }
+          </button>
+        </form>
+
+        <p class="auth-footer-link">
+          {{ i18n.t('alreadyRegistered') }}
+          <a routerLink="/login">{{ i18n.t('signIn') }}</a>
+        </p>
+      }
+    </div>
+  </main>
+</div>

@@ -1,0 +1,180 @@
+<div class="link-requests-page">
+  <div class="page-top-card esm-card">
+    <div>
+      <h2 class="esm-card-title">👨‍👩‍👧 Validation des inscriptions parents</h2>
+      <p class="text-slate-500">
+        Tant que la demande n'est pas approuvée, le compte du parent reste inactif et il ne voit aucune donnée scolaire.
+      </p>
+    </div>
+    <button type="button" class="btn btn-secondary btn-sm" (click)="refresh()" [disabled]="store.loading()">
+      @if (store.loading()) { <span class="btn-spinner" aria-hidden="true"></span> }
+      Actualiser
+    </button>
+  </div>
+
+  @if (actionSuccess()) {
+    <div class="alert alert-success" role="status">✓ {{ actionSuccess() }}</div>
+  }
+
+  @if (store.error()) {
+    <div class="alert alert-error" role="alert">
+      {{ store.error() }}
+      <button type="button" class="btn btn-sm btn-secondary" (click)="refresh()">Réessayer</button>
+    </div>
+  }
+
+  <!-- Pending requests -->
+  <section class="esm-card requests-card" aria-labelledby="pending-title">
+    <div class="esm-card-header">
+      <h3 class="esm-card-title" id="pending-title">
+        Demandes en attente ({{ store.pending().length }})
+      </h3>
+    </div>
+
+    <div class="esm-table-container">
+      <table class="esm-table">
+        <thead>
+          <tr>
+            <th scope="col">Parent</th>
+            <th scope="col">Contact</th>
+            <th scope="col">Enfant déclaré</th>
+            <th scope="col">Classe</th>
+            <th scope="col">Date</th>
+            <th scope="col" class="col-action">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (store.loading() && !store.loaded()) {
+            <tr><td colspan="6" class="empty-cell">Chargement des demandes…</td></tr>
+          } @else {
+            @for (req of store.pending(); track req.id) {
+              <tr>
+                <td>
+                  <strong>{{ req.parent_name || '—' }}</strong>
+                  <small class="muted-line">{{ relationshipLabel(req.relationship) }}</small>
+                </td>
+                <td>
+                  <span class="text-xs text-slate-600">📞 {{ req.parent_phone || '—' }}</span>
+                  <small class="muted-line">✉️ {{ req.parent_email || '—' }}</small>
+                </td>
+                <td><span class="badge badge-sky">{{ req.child_first_name }} {{ req.child_last_name }}</span></td>
+                <td>
+                  @if (req.declared_class_name) {
+                    <span class="badge badge-gold">{{ req.declared_class_name }}</span>
+                  } @else { <span class="text-slate-400">Non précisée</span> }
+                </td>
+                <td>{{ req.created_at | date:'dd/MM/yyyy HH:mm' }}</td>
+                <td class="col-action">
+                  <button type="button" class="btn btn-sm btn-primary-gold" (click)="openReview(req)">
+                    Examiner
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              @if (store.loaded()) {
+                <tr><td colspan="6" class="empty-cell">✅ Aucune demande en attente.</td></tr>
+              }
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- History -->
+  @if (store.processed().length > 0) {
+    <section class="esm-card history-card" aria-labelledby="history-title">
+      <div class="esm-card-header">
+        <h3 class="esm-card-title" id="history-title">Décisions récentes</h3>
+      </div>
+      <div class="esm-table-container">
+        <table class="esm-table">
+          <thead>
+            <tr>
+              <th scope="col">Parent</th>
+              <th scope="col">Enfant déclaré</th>
+              <th scope="col">Élève rattaché</th>
+              <th scope="col">Statut</th>
+              <th scope="col">Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (req of store.processed(); track req.id) {
+              <tr>
+                <td>{{ req.parent_name || '—' }}</td>
+                <td>{{ req.child_first_name }} {{ req.child_last_name }}</td>
+                <td>{{ studentLabel(req.student_id) || '—' }}</td>
+                <td>
+                  <span class="badge" [class.badge-mint]="req.status === 'approved'" [class.badge-coral]="req.status === 'rejected'">
+                    {{ req.status === 'approved' ? '✓ Approuvée' : '✕ Refusée' }}
+                  </span>
+                </td>
+                <td class="text-xs text-slate-500">{{ req.admin_note || '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</div>
+
+<!-- Review modal -->
+@if (selectedRequest(); as req) {
+  <div class="esm-modal-backdrop" (click)="closeReview()">
+    <div class="esm-modal-container" role="dialog" aria-modal="true" aria-labelledby="review-title"
+         (click)="$event.stopPropagation()" (keydown.escape)="closeReview()">
+      <div class="esm-card-header">
+        <h3 class="esm-card-title" id="review-title">🔍 Examen de la demande</h3>
+        <button type="button" class="close-btn" (click)="closeReview()" aria-label="Fermer">✕</button>
+      </div>
+
+      <div class="modal-body-content">
+        <div class="review-block">
+          <strong>Parent :</strong> {{ req.parent_name || '—' }}
+          ({{ relationshipLabel(req.relationship) }}) · {{ req.parent_phone || '—' }} · {{ req.parent_email || '—' }}
+        </div>
+        <div class="review-block">
+          <strong>Enfant déclaré :</strong>
+          <span class="badge badge-sky">{{ req.child_first_name }} {{ req.child_last_name }}</span>
+          @if (req.declared_class_name) { en <strong>{{ req.declared_class_name }}</strong> }
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="student-select">Élève existant à rattacher *</label>
+          <select id="student-select" class="form-select" [(ngModel)]="selectedStudentId"
+                  [attr.aria-invalid]="modalError() && !selectedStudentId ? true : null">
+            <option value="">— Choisir un élève —</option>
+            @for (opt of studentOptions(); track opt.student.id) {
+              <option [value]="opt.student.id">
+                {{ opt.score >= 2 ? '★ ' : '' }}{{ opt.student.first_name }} {{ opt.student.last_name }} ({{ opt.student.class_name || 'sans classe' }})
+              </option>
+            }
+          </select>
+          <p class="form-hint">★ = nom et prénom identiques à la déclaration. Vérifiez toujours le livret de famille.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="admin-note">Note interne (optionnel)</label>
+          <input id="admin-note" type="text" class="form-input" maxlength="500" [(ngModel)]="adminNote"
+                 placeholder="Ex : livret de famille vérifié" />
+        </div>
+
+        @if (modalError()) {
+          <div class="alert alert-error" role="alert">{{ modalError() }}</div>
+        }
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="decide('rejected')" [disabled]="submitting()">
+            @if (submitting() === 'rejected') { <span class="btn-spinner" aria-hidden="true"></span> }
+            ✕ Refuser
+          </button>
+          <button type="button" class="btn btn-primary-gold" (click)="decide('approved')" [disabled]="submitting()">
+            @if (submitting() === 'approved') { <span class="btn-spinner" aria-hidden="true"></span> }
+            ✓ Approuver et activer le compte
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

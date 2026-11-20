@@ -1,0 +1,155 @@
+<div class="bulletins-page">
+  <header class="esm-card page-head">
+    <div>
+      <h2 class="esm-card-title">📑 Bulletins trimestriels</h2>
+      <p class="text-slate-500">
+        Calculés à partir des notes saisies par les enseignants. Un bulletin n’est visible par les parents qu’après publication, et il est alors figé.
+      </p>
+    </div>
+    <div class="head-controls">
+      <label class="field">
+        <span>Classe</span>
+        <select class="form-select" [ngModel]="classId()" (ngModelChange)="setClass($event)">
+          @for (c of school.classes(); track c.id) { <option [value]="c.id">{{ c.name }}</option> }
+        </select>
+      </label>
+      <div class="trimester-switch" role="tablist" aria-label="Trimestre">
+        @for (t of trimesters; track t) {
+          <button type="button" role="tab" [class.active]="trimester() === t" [attr.aria-selected]="trimester() === t"
+                  (click)="setTrimester(t)">T{{ t }}</button>
+        }
+      </div>
+    </div>
+  </header>
+
+  @if (notice()) { <div class="alert alert-success" role="status">✓ {{ notice() }}</div> }
+  @if (error()) { <div class="alert alert-error" role="alert">{{ error() }}</div> }
+
+  <section class="esm-card">
+    <div class="list-toolbar">
+      <div class="status-counts" aria-live="polite">
+        <span class="badge badge-mint">{{ counts().published }} publié(s)</span>
+        <span class="badge badge-sky">{{ counts().ready }} prêt(s)</span>
+        <span class="badge badge-yellow">{{ counts().incomplete }} incomplet(s)</span>
+        <span class="badge badge-slate">{{ counts().none }} non calculé(s)</span>
+      </div>
+      <div class="toolbar-actions">
+        <button type="button" class="btn btn-secondary" (click)="generate()" [disabled]="busy() !== null || !counts().total">
+          @if (busy() === 'generate') { <span class="btn-spinner" aria-hidden="true"></span> }
+          {{ counts().none === counts().total ? 'Calculer les bulletins' : 'Recalculer les brouillons' }}
+        </button>
+        <button type="button" class="btn btn-primary-gold" (click)="publishAll()" [disabled]="busy() !== null || !counts().ready">
+          @if (busy() === 'publish-all') { <span class="btn-spinner" aria-hidden="true"></span> }
+          Publier les {{ counts().ready }} bulletin(s) prêt(s)
+        </button>
+      </div>
+    </div>
+
+    <div class="esm-table-container">
+      <table class="esm-table">
+        <thead>
+          <tr>
+            <th scope="col">Élève</th>
+            <th scope="col" class="num">Moyenne</th>
+            <th scope="col" class="num">Rang</th>
+            <th scope="col">État</th>
+            <th scope="col" class="actions">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading() && !lines().length) {
+            <tr><td colspan="5" class="empty-cell">Chargement…</td></tr>
+          }
+          @for (line of lines(); track line.student_id) {
+            <tr [class.row-selected]="selected()?.student_id === line.student_id">
+              <td><strong>{{ line.last_name }} {{ line.first_name }}</strong></td>
+              <td class="num">{{ line.card?.general_average != null ? (line.card!.general_average | number:'1.2-2') : '—' }}</td>
+              <td class="num">{{ line.card?.rank ?? '—' }}</td>
+              <td>
+                @if (!line.card) {
+                  <span class="badge badge-slate">Non calculé</span>
+                } @else if (line.card.status === 'published') {
+                  <span class="badge badge-mint">✓ Publié le {{ line.card.published_at | date:'dd/MM' }}</span>
+                } @else if (line.card.missing_count > 0) {
+                  <span class="badge badge-yellow" [title]="line.card.missing_subjects.join(', ')">⚠ {{ line.card.missing_count }} matière(s) sans note</span>
+                } @else {
+                  <span class="badge badge-sky">Prêt à publier</span>
+                }
+              </td>
+              <td class="actions">
+                @if (line.card) {
+                  <button type="button" class="btn btn-sm btn-outline-gold" (click)="open(line.card.id)" [disabled]="busy() !== null"
+                          [attr.aria-label]="'Examiner le bulletin de ' + line.first_name + ' ' + line.last_name">Examiner</button>
+                }
+              </td>
+            </tr>
+          } @empty {
+            @if (!loading()) { <tr><td colspan="5" class="empty-cell">Aucun élève dans cette classe.</td></tr> }
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  @if (selected(); as card) {
+    <section class="review-grid" aria-label="Examen du bulletin">
+      <aside class="esm-card review-panel">
+        <div class="review-head">
+          <h3 class="esm-card-title">{{ card.content.student_first_name }} {{ card.content.student_last_name }}</h3>
+          <button type="button" class="close-btn" (click)="selected.set(null)" aria-label="Fermer l’examen">✕</button>
+        </div>
+
+        @if (card.missing_count && card.status !== 'published') {
+          <div class="alert alert-error" role="status">
+            Notes manquantes : {{ card.content.missing_subjects?.join(', ') }}.
+            Complétez-les dans la saisie des notes puis recalculez.
+          </div>
+        }
+
+        <label class="field">
+          <span>Distinction</span>
+          <input class="form-input" list="mention-options" maxlength="120" [(ngModel)]="form.mention" [disabled]="card.status === 'published'" />
+          <datalist id="mention-options">
+            @for (m of mentions; track m) { <option [value]="m"></option> }
+          </datalist>
+          <small class="form-hint">Proposée selon la moyenne ; modifiable.</small>
+        </label>
+        <label class="field">
+          <span>Comportement et travail</span>
+          <textarea class="form-input" rows="3" maxlength="600" [(ngModel)]="form.behaviorRemarks" [disabled]="card.status === 'published'"></textarea>
+        </label>
+        <label class="field">
+          <span>Mot du directeur</span>
+          <textarea class="form-input" rows="3" maxlength="600" [(ngModel)]="form.headmasterRemarks" [disabled]="card.status === 'published'"></textarea>
+        </label>
+
+        <div class="review-actions">
+          @if (card.status === 'published') {
+            <button type="button" class="btn btn-outline-danger" (click)="unpublish()" [disabled]="busy() !== null">Retirer la publication</button>
+          } @else {
+            <button type="button" class="btn btn-secondary" (click)="saveRemarks()" [disabled]="busy() !== null">
+              @if (busy() === 'save') { <span class="btn-spinner" aria-hidden="true"></span> } Enregistrer
+            </button>
+            <button type="button" class="btn btn-primary-gold" (click)="publish()" [disabled]="busy() !== null || !!card.missing_count">
+              @if (busy() === 'publish') { <span class="btn-spinner" aria-hidden="true"></span> } Publier
+            </button>
+          }
+        </div>
+      </aside>
+
+      <div class="review-preview">
+        <div class="doc-tabs" role="tablist">
+          <button type="button" role="tab" [class.active]="docTab() === 'official'" [attr.aria-selected]="docTab() === 'official'" (click)="docTab.set('official')">Bulletin officiel</button>
+          @if (card.content.languages_details?.length) {
+            <button type="button" role="tab" [class.active]="docTab() === 'languages'" [attr.aria-selected]="docTab() === 'languages'" (click)="docTab.set('languages')">Fiche langues</button>
+          }
+        </div>
+        @if (docTab() === 'official') {
+          <app-bulletin-view [reportCard]="card"></app-bulletin-view>
+        } @else {
+          <app-languages-sheet-view [reportCard]="card"></app-languages-sheet-view>
+        }
+      </div>
+    </section>
+  }
+</div>

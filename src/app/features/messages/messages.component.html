@@ -1,0 +1,187 @@
+<div class="messages-page" [class.thread-open]="thread() || composing()">
+  <!-- Conversation list -->
+  <aside class="esm-card list-pane" aria-label="Conversations">
+    <div class="pane-head">
+      <div>
+        <h2 class="esm-card-title">💬 Messages</h2>
+        <p class="pane-sub">{{ isTeacher() ? 'Notes et échanges avec les parents' : 'Échanges avec les enseignants' }}</p>
+      </div>
+      <button type="button" class="btn btn-primary-gold btn-sm" (click)="startCompose()">
+        + Écrire
+      </button>
+    </div>
+
+    @if (loading()) {
+      <p class="pane-empty">Chargement…</p>
+    } @else {
+      <ul class="conv-list">
+        @for (c of list(); track c.id) {
+          <li>
+            <button type="button" class="conv-item" [class.active]="thread()?.id === c.id" [class.unread]="c.unread > 0" (click)="open(c.id)">
+              <span class="conv-avatar" aria-hidden="true">{{ isTeacher() ? '👪' : '🧑‍🏫' }}</span>
+              <span class="conv-body">
+                <span class="conv-top">
+                  <strong>{{ counterpart(c) }}</strong>
+                  <time [attr.datetime]="c.last_message_at">{{ c.last_message_at | date:'dd/MM HH:mm' }}</time>
+                </span>
+                @if (!isTeacher()) { <small class="conv-child">{{ c.student_name }}</small> }
+                @else if (c.class_name) { <small class="conv-child">{{ c.class_name }}</small> }
+                @if (c.last_message; as m) {
+                  <span class="conv-preview">
+                    @if (m.kind === 'note') { <span aria-hidden="true">{{ categoryOf(m.category).icon }}</span> Note : }
+                    @else if (m.from_me) { Vous : }
+                    {{ m.body }}
+                  </span>
+                }
+              </span>
+              @if (c.unread > 0) { <span class="unread-dot">{{ c.unread }}<span class="sr-only"> non lu(s)</span></span> }
+            </button>
+          </li>
+        } @empty {
+          <li class="pane-empty">
+            {{ isTeacher()
+              ? 'Aucun échange pour le moment. Laissez une note à un élève : seuls ses parents pourront la lire.'
+              : 'Aucun message. Vous pouvez écrire aux enseignants de vos enfants.' }}
+          </li>
+        }
+      </ul>
+    }
+  </aside>
+
+  <!-- Thread / composer -->
+  <section class="esm-card thread-pane" aria-live="polite">
+    @if (error()) { <div class="alert alert-error" role="alert">{{ error() }}</div> }
+
+    @if (composing()) {
+      <div class="pane-head">
+        <button type="button" class="back-btn" (click)="close()" aria-label="Retour à la liste">←</button>
+        <h3 class="esm-card-title">{{ isTeacher() ? 'Nouvelle note ou message' : 'Nouveau message' }}</h3>
+      </div>
+
+      <form class="compose-form" (ngSubmit)="sendDraft()" novalidate>
+        @if (isTeacher()) {
+          <div class="form-row">
+            <label class="field"><span>Classe</span>
+              <select class="form-select" name="classId" [(ngModel)]="draft.classId" (ngModelChange)="draft.studentId = ''">
+                @for (c of teacherClasses(); track c.id) { <option [value]="c.id">{{ c.name }}</option> }
+              </select>
+            </label>
+            <label class="field"><span>Élève</span>
+              <select class="form-select" name="studentId" [(ngModel)]="draft.studentId">
+                <option value="">— Choisir —</option>
+                @for (s of studentsForDraft(); track s.student_id) { <option [value]="s.student_id">{{ s.student_name }}</option> }
+              </select>
+            </label>
+          </div>
+          @if (selectedTeacherContact() && !selectedTeacherContact()!.has_parent_account) {
+            <p class="form-hint">ℹ️ Aucun parent de cet élève n’a encore de compte : votre message sera lisible dès qu’un parent sera rattaché.</p>
+          }
+          <fieldset class="kind-picker">
+            <legend>Type</legend>
+            <label><input type="radio" name="kind" value="note" [(ngModel)]="draft.kind" /> Note sur l’élève</label>
+            <label><input type="radio" name="kind" value="message" [(ngModel)]="draft.kind" /> Message</label>
+          </fieldset>
+          @if (draft.kind === 'note') {
+            <div class="category-chips" role="radiogroup" aria-label="Catégorie de la note">
+              @for (cat of categories; track cat.id) {
+                <label class="chip" [class.active]="draft.category === cat.id">
+                  <input type="radio" class="sr-only" name="category" [value]="cat.id" [(ngModel)]="draft.category" />
+                  {{ cat.icon }} {{ cat.label }}
+                </label>
+              }
+            </div>
+          }
+        } @else {
+          @if (!parentContacts().length) {
+            <p class="form-hint">Aucun enfant rattaché à votre compte.</p>
+          }
+          <div class="form-row">
+            <label class="field"><span>Enfant</span>
+              <select class="form-select" name="studentId" [(ngModel)]="draft.studentId" (ngModelChange)="onDraftChildChange()">
+                @for (c of parentContacts(); track c.student_id) { <option [value]="c.student_id">{{ c.student_name }}</option> }
+              </select>
+            </label>
+            <label class="field"><span>Enseignant</span>
+              <select class="form-select" name="teacherId" [(ngModel)]="draft.teacherId" [disabled]="!teachersForDraft().length">
+                @for (t of teachersForDraft(); track t.id) {
+                  <option [value]="t.id">{{ t.full_name }}{{ t.subjects.length && t.subjects.length < 4 ? ' — ' + t.subjects.join(', ') : '' }}</option>
+                } @empty { <option value="">Aucun enseignant attribué à cette classe</option> }
+              </select>
+            </label>
+          </div>
+        }
+
+        <label class="field"><span>{{ draft.kind === 'note' && isTeacher() ? 'Note' : 'Message' }}</span>
+          <textarea class="form-input" name="body" rows="6" maxlength="2000" [(ngModel)]="draft.body"
+                    placeholder="Écrivez ici…"></textarea>
+        </label>
+        <p class="privacy-hint">🔒 {{ isTeacher() ? 'Visible uniquement par les parents de cet élève.' : 'Visible uniquement par vous, l’autre parent rattaché et cet enseignant.' }}</p>
+        <div class="compose-actions">
+          <button type="button" class="btn btn-secondary" (click)="close()">Annuler</button>
+          <button type="submit" class="btn btn-primary-gold" [disabled]="!canSendDraft() || sending()">
+            @if (sending()) { <span class="btn-spinner" aria-hidden="true"></span> } Envoyer
+          </button>
+        </div>
+      </form>
+    } @else if (thread()) {
+      @let t = thread()!;
+      <div class="pane-head thread-head">
+        <button type="button" class="back-btn" (click)="close()" aria-label="Retour à la liste">←</button>
+        <div>
+          <h3 class="esm-card-title">{{ counterpart(t) }}</h3>
+          <p class="pane-sub">{{ isTeacher() ? t.class_name : 'À propos de ' + t.student_name }}</p>
+        </div>
+      </div>
+
+      <div class="message-scroll" #scrollBox>
+        @for (m of t.messages; track m.id) {
+          @if (m.kind === 'note') {
+            <article class="note-card" [attr.data-category]="m.category">
+              <header>
+                <span class="note-tag">{{ categoryOf(m.category).icon }} {{ categoryOf(m.category).label }}</span>
+                <span class="note-meta">{{ m.author_name }} · {{ m.created_at | date:'dd/MM/yyyy HH:mm' }}</span>
+              </header>
+              <p>{{ m.body }}</p>
+            </article>
+          } @else {
+            <div class="bubble-row" [class.mine]="m.from_me">
+              <div class="bubble">
+                @if (!m.from_me) { <span class="bubble-author">{{ m.author_name }}</span> }
+                <p>{{ m.body }}</p>
+                <time [attr.datetime]="m.created_at">{{ m.created_at | date:'dd/MM HH:mm' }}</time>
+              </div>
+            </div>
+          }
+        }
+      </div>
+
+      <form class="reply-box" (ngSubmit)="send()" novalidate>
+        @if (isTeacher()) {
+          <div class="reply-options">
+            <label><input type="checkbox" [checked]="replyKind === 'note'" (change)="replyKind = $any($event.target).checked ? 'note' : 'message'" /> Note sur l’élève</label>
+            @if (replyKind === 'note') {
+              <select class="form-select compact" name="replyCategory" [(ngModel)]="replyCategory" aria-label="Catégorie de la note">
+                @for (cat of categories; track cat.id) { <option [value]="cat.id">{{ cat.icon }} {{ cat.label }}</option> }
+              </select>
+            }
+          </div>
+        }
+        <div class="reply-row">
+          <textarea class="form-input" name="reply" rows="2" maxlength="2000" [(ngModel)]="reply" (keydown)="onReplyKey($event)"
+                    placeholder="Votre réponse… (Ctrl + Entrée pour envoyer)" aria-label="Votre réponse"></textarea>
+          <button type="submit" class="btn btn-primary-gold" [disabled]="!reply.trim() || sending()">
+            @if (sending()) { <span class="btn-spinner" aria-hidden="true"></span> } Envoyer
+          </button>
+        </div>
+      </form>
+    } @else if (threadLoading()) {
+      <p class="pane-empty">Chargement…</p>
+    } @else {
+      <div class="thread-placeholder">
+        <span aria-hidden="true">💬</span>
+        <p>Choisissez une conversation, ou commencez-en une nouvelle.</p>
+        <p class="privacy-hint">🔒 Chaque échange concerne un seul élève : seuls ses parents et l’enseignant y ont accès.</p>
+      </div>
+    }
+  </section>
+</div>

@@ -1,0 +1,113 @@
+<div class="homework-page">
+  <header class="page-title">
+    <h2>📚 Devoirs</h2>
+    <p>Chaque devoir publié est envoyé en notification aux parents de la classe.</p>
+  </header>
+
+  @if (notice()) { <div class="alert alert-success" role="status">✓ {{ notice() }}</div> }
+  @if (error()) { <div class="alert alert-error" role="alert">{{ error() }}</div> }
+
+  @if (loading()) {
+    <div class="esm-card empty">Chargement…</div>
+  } @else if (!assignments().length) {
+    <div class="esm-card empty">
+      <strong>Aucune matière ne vous est attribuée.</strong>
+      <p>L’administration associe chaque matière d’une classe à un enseignant.</p>
+    </div>
+  } @else {
+    <form class="esm-card hw-form" [class.editing]="editingId()" (ngSubmit)="save()" novalidate>
+      <h3 class="esm-card-title">{{ editingId() ? 'Modifier le devoir' : 'Nouveau devoir' }}</h3>
+
+      <div class="row">
+        <label class="field">
+          <span>Classe</span>
+          <select class="form-select" name="classId" [(ngModel)]="classId" (ngModelChange)="onClassChange()" [disabled]="!!editingId()">
+            @for (c of classes(); track c.id) { <option [value]="c.id">{{ c.name }}</option> }
+          </select>
+        </label>
+        <label class="field">
+          <span>Matière</span>
+          <select class="form-select" name="classSubjectId" [(ngModel)]="form.classSubjectId" [disabled]="!!editingId()">
+            @for (a of subjectsOfClass(); track a.id) { <option [value]="a.id">{{ a.subject_name }}</option> }
+          </select>
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Titre *</span>
+        <input class="form-input" name="title" maxlength="150" autocomplete="off" required [(ngModel)]="form.title"
+               placeholder="Ex : Exercices 4 et 5 page 32" />
+      </label>
+
+      <label class="field">
+        <span>Consignes (facultatif)</span>
+        <textarea class="form-input" name="description" rows="3" maxlength="3000" [(ngModel)]="form.description"
+                  placeholder="Ce que l’enfant doit faire, le matériel à préparer…"></textarea>
+      </label>
+
+      <div class="field">
+        <label for="due-date">Pour le *</label>
+        <div class="due-row">
+          <input id="due-date" class="form-input due-input" type="date" name="dueDate" required [min]="minDate" [(ngModel)]="form.dueDate" />
+          <div class="quick-dates" role="group" aria-label="Dates rapides">
+            @for (q of quickDates; track q.label) {
+              <button type="button" class="chip" [class.active]="form.dueDate === q.value" (click)="form.dueDate = q.value">{{ q.label }}</button>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        @if (editingId()) {
+          <button type="button" class="btn btn-secondary" (click)="cancelEdit()">Annuler</button>
+        }
+        <button type="submit" class="btn btn-primary-gold" [disabled]="saving()">
+          @if (saving()) { <span class="btn-spinner" aria-hidden="true"></span> }
+          {{ editingId() ? 'Enregistrer' : 'Publier et notifier les parents' }}
+        </button>
+      </div>
+    </form>
+
+    <section class="hw-section" aria-labelledby="upcoming-title">
+      <h3 id="upcoming-title">À venir <span class="count">{{ upcoming().length }}</span></h3>
+      @for (h of upcoming(); track h.id) {
+        <ng-container [ngTemplateOutlet]="card" [ngTemplateOutletContext]="{ $implicit: h }"></ng-container>
+      } @empty {
+        <p class="muted">Aucun devoir à venir.</p>
+      }
+    </section>
+
+    @if (past().length) {
+      <section class="hw-section" aria-labelledby="past-title">
+        <h3 id="past-title">Passés (30 derniers jours) <span class="count">{{ past().length }}</span></h3>
+        @for (h of past(); track h.id) {
+          <ng-container [ngTemplateOutlet]="card" [ngTemplateOutletContext]="{ $implicit: h, past: true }"></ng-container>
+        }
+      </section>
+    }
+  }
+</div>
+
+<ng-template #card let-h let-past="past">
+  <article class="esm-card hw-card" [class.past]="past" [class.editing]="editingId() === h.id">
+    <div class="hw-top">
+      <span class="badge badge-gold">{{ h.class_name }}</span>
+      <span class="badge badge-slate">{{ h.subject_name }}</span>
+      <span class="due" [class.soon]="!past && dueLabel(h.due_date) !== '' && (h.due_date <= minDate)">
+        {{ dueLabel(h.due_date) }} · {{ h.due_date | date:'EEE dd/MM' }}
+      </span>
+    </div>
+    <h4>{{ h.title }}</h4>
+    @if (h.description) { <p class="desc">{{ h.description }}</p> }
+    <div class="hw-bottom">
+      <div class="progress" [attr.title]="h.done_count + ' famille(s) sur ' + h.class_size + ' ont coché « fait »'">
+        <span class="progress-track" aria-hidden="true"><span class="progress-fill" [style.width.%]="progress(h)"></span></span>
+        <small>{{ h.done_count }}/{{ h.class_size }} faits</small>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn btn-sm btn-outline-gold" (click)="edit(h)" [attr.aria-label]="'Modifier ' + h.title">Modifier</button>
+        <button type="button" class="btn btn-sm btn-outline-danger" (click)="remove(h)" [attr.aria-label]="'Supprimer ' + h.title">Supprimer</button>
+      </div>
+    </div>
+  </article>
+</ng-template>

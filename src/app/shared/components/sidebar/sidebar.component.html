@@ -1,0 +1,215 @@
+<aside class="app-sidebar no-print" [class.collapsed]="isCollapsed">
+  <!-- Nav Links based on Role -->
+  <nav class="sidebar-nav">
+    <!-- ================= PARENT MENU ================= -->
+    <ng-container *ngIf="auth.isParent()">
+      <div class="nav-section-title">{{ i18n.t('roleParent') }}</div>
+
+      <a routerLink="/parent/dashboard" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">{{ i18n.t('navDashboard') }}</span>
+      </a>
+
+      <a routerLink="/parent/grades" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">{{ i18n.t('navGrades') }}</span>
+      </a>
+
+      <a routerLink="/parent/homework" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">✏️</span>
+        <span class="nav-label">{{ i18n.t('navHomework') }}</span>
+        <span class="nav-badge badge-yellow" *ngIf="getPendingHomeworkCount() > 0">{{ getPendingHomeworkCount() }}</span>
+      </a>
+
+      <a routerLink="/parent/attendance" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📅</span>
+        <span class="nav-label">{{ i18n.t('navAttendance') }}</span>
+      </a>
+
+      <a routerLink="/parent/timetable" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">⏰</span>
+        <span class="nav-label">{{ i18n.t('navTimetable') }}</span>
+      </a>
+
+      <a routerLink="/parent/fees" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">💳</span>
+        <span class="nav-label">{{ i18n.t('navFees') }}</span>
+      </a>
+
+      <a routerLink="/parent/messages" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">💬</span>
+        <span class="nav-label">Messages</span>
+        <span class="nav-badge badge-coral" *ngIf="messages.unread() > 0">{{ messages.unread() }}<span class="sr-only"> non lu(s)</span></span>
+      </a>
+
+      <a routerLink="/parent/calendar" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📅</span>
+        <span class="nav-label">{{ i18n.t('navCalendar') }}</span>
+      </a>
+
+      <a routerLink="/parent/appointments" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🤝</span>
+        <span class="nav-label">{{ i18n.t('navAppointments') }}</span>
+      </a>
+
+      <a routerLink="/pwa-install" routerLinkActive="active" class="nav-item pwa-highlight">
+        <span class="nav-icon">📲</span>
+        <span class="nav-label">{{ i18n.t('navPwa') }}</span>
+        <span class="badge badge-gold">App</span>
+      </a>
+    </ng-container>
+
+    <!-- ================= TEACHER MENU ================= -->
+    <ng-container *ngIf="auth.isTeacher()">
+      <div class="nav-section-title">{{ i18n.t('roleTeacher') }}</div>
+
+      <a routerLink="/teacher/classes" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🏫</span>
+        <span class="nav-label">{{ i18n.t('navClasses') }}</span>
+      </a>
+
+      <a routerLink="/teacher/attendance" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">{{ i18n.t('navRollCall') }}</span>
+      </a>
+
+      <a routerLink="/teacher/grades" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">✍️</span>
+        <span class="nav-label">{{ i18n.t('navGrades') }}</span>
+      </a>
+
+      <a routerLink="/teacher/homework" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📝</span>
+        <span class="nav-label">{{ i18n.t('navHomework') }}</span>
+      </a>
+
+      <a routerLink="/teacher/messages" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">💬</span>
+        <span class="nav-label">Messages</span>
+        <span class="nav-badge badge-coral" *ngIf="messages.unread() > 0">{{ messages.unread() }}<span class="sr-only"> non lu(s)</span></span>
+      </a>
+
+      <a routerLink="/teacher/calendar" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📅</span>
+        <span class="nav-label">{{ i18n.t('navCalendar') }}</span>
+      </a>
+
+      <a routerLink="/teacher/appointments" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🤝</span>
+        <span class="nav-label">{{ i18n.t('navAppointments') }}</span>
+        <span class="nav-badge badge-coral" *ngIf="getPendingAppointmentsCount() > 0">{{ getPendingAppointmentsCount() }}</span>
+      </a>
+    </ng-container>
+
+    <!-- ================= ÉCONOME MENU ================= -->
+    <ng-container *ngIf="auth.isEconome()">
+      <div class="nav-section-title">{{ i18n.t('roleEconome') }}</div>
+
+      <a routerLink="/econome/payments" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">💰</span>
+        <span class="nav-label">{{ i18n.t('recordPayment') }}</span>
+      </a>
+
+      <a routerLink="/econome/fees" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">{{ i18n.t('feesTitle') }}</span>
+        <span class="nav-badge badge-coral" *ngIf="getOverdueFeesCount() > 0">{{ getOverdueFeesCount() }} en retard</span>
+      </a>
+
+      <a routerLink="/econome/finance" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">💼</span>
+        <span class="nav-label">Gestion financière</span>
+      </a>
+
+      <a routerLink="/econome/calendar" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📅</span>
+        <span class="nav-label">{{ i18n.t('navCalendar') }}</span>
+      </a>
+    </ng-container>
+
+    <!-- ================= MODERATOR MENU ================= -->
+    <ng-container *ngIf="auth.isModerator()">
+      <div class="nav-section-title">Modérateur / Site</div>
+
+      <a routerLink="/moderator/dashboard" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🧭</span>
+        <span class="nav-label">Espace personnel</span>
+      </a>
+
+      <a routerLink="/admin/news" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📢</span>
+        <span class="nav-label">Actualités</span>
+      </a>
+
+      <a routerLink="/moderator/avis" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">💬</span>
+        <span class="nav-label">Avis & messages</span>
+      </a>
+
+      <a routerLink="/moderator/calendar" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📅</span>
+        <span class="nav-label">{{ i18n.t('navCalendar') }}</span>
+      </a>
+
+      <a routerLink="/moderator/services" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🚌</span>
+        <span class="nav-label">Services annexes</span>
+      </a>
+    </ng-container>
+
+    <!-- ================= ADMIN MENU ================= -->
+    <ng-container *ngIf="auth.isAdmin()">
+      <div class="nav-section-title">{{ i18n.t('roleAdmin') }}</div>
+
+      <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📈</span>
+        <span class="nav-label">Tableau de bord</span>
+      </a>
+
+      <a routerLink="/admin/link-requests" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">👨‍👩‍👧</span>
+        <span class="nav-label">{{ i18n.t('navLinkRequests') }}</span>
+        <span class="nav-badge badge-coral" *ngIf="getPendingLinkRequestsCount() > 0">{{ getPendingLinkRequestsCount() }}</span>
+      </a>
+
+      <a routerLink="/admin/structure" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🏫</span>
+        <span class="nav-label">{{ i18n.t('navStudents') }}</span>
+      </a>
+
+      <a routerLink="/admin/bulletins" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📑</span>
+        <span class="nav-label">Gestion des Bulletins</span>
+      </a>
+
+      <a routerLink="/admin/news" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📢</span>
+        <span class="nav-label">{{ i18n.t('navNews') }}</span>
+      </a>
+
+      <a routerLink="/admin/services" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🚌</span>
+        <span class="nav-label">Services annexes</span>
+      </a>
+
+      <a routerLink="/moderator/avis" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">💬</span>
+        <span class="nav-label">Avis du site</span>
+      </a>
+
+      <a routerLink="/admin/calendar" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📅</span>
+        <span class="nav-label">{{ i18n.t('navCalendar') }}</span>
+      </a>
+    </ng-container>
+  </nav>
+
+  <!-- Footer Info -->
+  <div class="sidebar-footer">
+    <div class="school-seal-mini">
+      <span class="star">★</span>
+      <span>Excellence School</span>
+    </div>
+    <div class="school-year-badge badge badge-gold">2026 - 2027</div>
+  </div>
+</aside>

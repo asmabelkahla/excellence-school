@@ -1,0 +1,112 @@
+<div class="teacher-appointments-page">
+  <div class="teacher-appts-header esm-card">
+    <div>
+      <h2 class="esm-card-title">🤝 Demandes de Rendez-vous Parents</h2>
+      <p class="text-slate-500">Validez les demandes d'entretien, proposez d'autres créneaux ou planifiez vos réunions.</p>
+    </div>
+  </div>
+
+  <div class="appts-list">
+    <div *ngFor="let appt of teacherAppointments()" class="appt-card esm-card">
+      <div class="card-header-bar">
+        <div class="parent-info">
+          <span class="p-avatar">👨‍👩‍👧</span>
+          <div>
+            <h3 class="parent-name">{{ appt.parent_name }}</h3>
+            <span class="student-label">Parent de <strong>{{ appt.student_name }}</strong> ({{ appt.class_name }})</span>
+            <span class="phone-tag text-slate-500" *ngIf="appt.parent_phone">📞 {{ appt.parent_phone }}</span>
+          </div>
+        </div>
+
+        <span
+          class="badge"
+          [ngClass]="appt.status === 'confirmed' ? 'badge-mint' : appt.status === 'alternatives_proposed' ? 'badge-yellow' : appt.status === 'declined' ? 'badge-coral' : 'badge-gold'"
+        >
+          {{ appt.status === 'confirmed' ? '✓ Confirmé' : appt.status === 'alternatives_proposed' ? 'Horaires proposés' : appt.status === 'declined' ? 'Refusé' : 'En attente' }}
+        </span>
+      </div>
+
+      <div class="details-body">
+        <p><strong>Motif de l'entretien :</strong> {{ appt.reason }}</p>
+        <p *ngIf="appt.note"><strong>Note du parent :</strong> « {{ appt.note }} »</p>
+        <p><strong>Disponibilités souhaitées :</strong> {{ appt.preferred_slots }}</p>
+
+        <div *ngIf="appt.status === 'confirmed'" class="confirmed-notice">
+          📍 Fixé le <strong>{{ appt.confirmed_start | date:'EEEE dd MMMM yyyy à HH:mm' }}</strong> ({{ appt.location }})
+        </div>
+      </div>
+
+      <!-- Action Buttons for Teacher -->
+      <div class="action-footer" *ngIf="appt.status === 'pending'">
+        <button class="btn btn-sm btn-primary-gold" (click)="openConfirm(appt)">
+          ✓ Confirmer le Rendez-vous
+        </button>
+        <button class="btn btn-sm btn-outline-gold" (click)="openPropose(appt)">
+          ⏰ Proposer d'autres horaires
+        </button>
+        <button class="btn btn-sm btn-secondary" (click)="decline(appt)">
+          ✕ Décliner
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="teacherAppointments().length === 0" class="empty-state esm-card text-center">
+      <div class="empty-icon">🤝</div>
+      <h3>Aucune demande de rendez-vous en attente</h3>
+      <p class="text-slate-500">Les nouvelles demandes des parents de vos classes s'afficheront ici.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Confirm -->
+<div class="esm-modal-backdrop" *ngIf="showConfirmModal" (click)="showConfirmModal = false">
+  <div class="esm-modal-container" (click)="$event.stopPropagation()">
+    <div class="esm-card-header">
+      <h3 class="esm-card-title">✓ Confirmer le Rendez-vous</h3>
+      <button class="close-btn" (click)="showConfirmModal = false">✕</button>
+    </div>
+    <form (ngSubmit)="confirmAppointment()">
+      <div class="form-group">
+        <label class="form-label">Date et Heure du rendez-vous *</label>
+        <input type="datetime-local" [(ngModel)]="confirmedDateTime" name="dt" class="form-input" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Lieu du rendez-vous</label>
+        <input type="text" [(ngModel)]="location" name="loc" class="form-input" required />
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem;">
+        <button type="button" class="btn btn-secondary" (click)="showConfirmModal = false">Annuler</button>
+        <button type="submit" class="btn btn-primary-gold">Confirmer et Notifier le Parent</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Propose Alternative Slots (CDC 3.8) -->
+<div class="esm-modal-backdrop" *ngIf="showProposeModal" (click)="showProposeModal = false">
+  <div class="esm-modal-container" (click)="$event.stopPropagation()">
+    <div class="esm-card-header">
+      <h3 class="esm-card-title">⏰ Proposer d'Autres Horaires</h3>
+      <button class="close-btn" (click)="showProposeModal = false">✕</button>
+    </div>
+    <p class="modal-desc">
+      Indiquez deux créneaux disponibles selon votre planning de réception. Le parent recevra une notification et pourra choisir :
+    </p>
+
+    <div class="proposal-inputs">
+      <div class="form-group">
+        <label class="form-label">Créneau 1 : Mardi 15h00 - 15h30</label>
+        <span class="badge badge-sky">Plage réception enseignants</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Créneau 2 : Jeudi 11h30 - 12h00</label>
+        <span class="badge badge-sky">Plage réception enseignants</span>
+      </div>
+    </div>
+
+    <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem;">
+      <button type="button" class="btn btn-secondary" (click)="showProposeModal = false">Annuler</button>
+      <button type="button" class="btn btn-primary-gold" (click)="submitProposals()">Envoyer les propositions au Parent</button>
+    </div>
+  </div>
+</div>

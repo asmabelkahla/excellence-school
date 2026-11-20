@@ -1,0 +1,85 @@
+<div class="esm-modal-backdrop" (click)="close.emit()">
+  <div class="esm-modal-container esm-modal-lg receipt-modal-box" (click)="$event.stopPropagation()">
+    <!-- Action header -->
+    <div class="receipt-action-bar no-print">
+      <button class="btn btn-primary-gold" (click)="printReceipt()">
+        🖨️ {{ i18n.t('printReceipt') }} (PDF)
+      </button>
+      <button class="btn btn-secondary" (click)="close.emit()">
+        ✕ {{ i18n.t('close') }}
+      </button>
+    </div>
+
+    <!-- Official Printable Receipt Paper -->
+    <div class="print-page official-receipt-sheet">
+      <!-- School Logo & Header -->
+      <div class="receipt-header">
+        <div class="school-info">
+          <img src="assets/logo-excellence-school-monastir.jpg" alt="Excellence School" class="receipt-logo" onerror="this.src='logo.jpg'" />
+          <div>
+            <h3>EXCELLENCE SCHOOL MONASTIR</h3>
+            <p>École Primaire Privée • Monastir, Tunisie</p>
+            <p>Tél : +216 73 456 789 / +216 50 111 222</p>
+          </div>
+        </div>
+        <div class="receipt-badge-box">
+          <div class="receipt-title">REÇU DE RÈGLEMENT</div>
+          <div class="receipt-num">N° : {{ fee?.reference || ('REC-2026-' + fee?.id) }}</div>
+          <div class="receipt-date">Date : {{ fee?.paid_at || (fee?.created_at | date:'yyyy-MM-dd') }}</div>
+        </div>
+      </div>
+
+      <hr class="receipt-divider" />
+
+      <!-- Details Table -->
+      <div class="receipt-content-grid">
+        <div class="receipt-row">
+          <span class="label">Élève concerné :</span>
+          <span class="val font-bold">{{ fee?.student_name }}</span>
+        </div>
+        <div class="receipt-row">
+          <span class="label">Classe :</span>
+          <span class="val">{{ fee?.class_name || '3ème A' }}</span>
+        </div>
+        <div class="receipt-row">
+          <span class="label">Objet du versement :</span>
+          <span class="val font-bold">{{ fee?.label }}</span>
+        </div>
+        <div class="receipt-row">
+          <span class="label">Mode de règlement :</span>
+          <span class="val">
+            {{ fee?.method === 'cash' ? 'Espèces à la caisse' : fee?.method === 'cheque' ? 'Chèque bancaire' : 'Virement bancaire' }}
+            <span *ngIf="fee?.reference"> (Réf : {{ fee?.reference }})</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Amount Box in TND (3 decimals) -->
+      <div class="amount-highlight-box">
+        <div class="amount-label">MONTANT REÇU / المبلغ المقبوض :</div>
+        <div class="amount-number">
+          {{ (fee?.paid_amount || fee?.amount) | number:'1.3-3' }} <span class="currency">TND (Dinars Tunisiens)</span>
+        </div>
+      </div>
+
+      <!-- Footer with Signatures and Stamp -->
+      <div class="receipt-footer">
+        <div class="receipt-sig">
+          <span>Le Parent / Déposant</span>
+          <div class="sig-blank"></div>
+        </div>
+
+        <div class="receipt-stamp-circle">
+          <span>EXCELLENCE SCHOOL</span>
+          <span>SERVICES FINANCIERS</span>
+          <span>★ MONASTIR ★</span>
+        </div>
+
+        <div class="receipt-sig">
+          <span>L'Économe / Caisse</span>
+          <div class="sig-blank signed">M. Nizar Chaabane</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

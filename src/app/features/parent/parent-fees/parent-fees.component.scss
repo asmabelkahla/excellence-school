@@ -1,0 +1,61 @@
+.fees-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.fees-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.summary-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.summary-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+
+  .card-icon {
+    font-size: 2rem;
+  }
+
+  .card-info {
+    display: flex;
+    flex-direction: column;
+
+    small {
+      font-size: 0.8rem;
+      color: var(--slate-500);
+      font-weight: 700;
+    }
+
+    strong {
+      font-size: 1.5rem;
+      font-weight: 900;
+    }
+
+    .text-mint { color: var(--mint-primary); }
+    .text-yellow { color: var(--yellow-primary); }
+    .text-coral { color: var(--coral-primary); }
+  }
+}
+
+.bursar-note {
+  margin-top: 1.25rem;
+  padding: 0.85rem 1.25rem;
+  background-color: var(--gold-50);
+  border: 1px solid var(--gold-300);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  color: var(--gold-900);
+  line-height: 1.5;
+}

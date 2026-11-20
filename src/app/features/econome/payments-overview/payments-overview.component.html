@@ -1,0 +1,149 @@
+<div class="payments-overview-page">
+  <!-- Top Bar -->
+  <div class="overview-top-bar esm-card">
+    <div>
+      <h2 class="esm-card-title">📊 Suivi Général des Frais & Recouvrement</h2>
+      <p class="text-slate-500">Vue d'ensemble des scolarités, cantine, activités et retards de paiement (TND).</p>
+    </div>
+
+    <div class="quick-export-actions">
+      <button class="btn btn-secondary" onclick="window.print()">
+        🖨️ Imprimer État Financier
+      </button>
+    </div>
+  </div>
+
+  <!-- Big KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi-card esm-card">
+      <span class="kpi-label">Total Prévu (Échéancier)</span>
+      <span class="kpi-val text-slate-800">{{ schoolData.feeStatistics().total_expected | number:'1.3-3' }} DT</span>
+      <small class="text-slate-500">Année 2026-2027</small>
+    </div>
+
+    <div class="kpi-card esm-card">
+      <span class="kpi-label">Total Encaissé (Caisse)</span>
+      <span class="kpi-val text-mint">{{ schoolData.feeStatistics().total_collected | number:'1.3-3' }} DT</span>
+      <small class="badge badge-mint">{{ schoolData.feeStatistics().count_paid }} règlements</small>
+    </div>
+
+    <div class="kpi-card esm-card">
+      <span class="kpi-label">Montant en Retard</span>
+      <span class="kpi-val text-coral">{{ schoolData.feeStatistics().total_overdue | number:'1.3-3' }} DT</span>
+      <small class="badge badge-coral">{{ schoolData.feeStatistics().count_overdue }} impayés</small>
+    </div>
+
+    <div class="kpi-card esm-card">
+      <span class="kpi-label">Solde général</span>
+      <span class="kpi-val text-yellow">{{ financialSummary().balance | number:'1.3-3' }} DT</span>
+      <small class="badge badge-yellow">Recettes nettes</small>
+    </div>
+  </div>
+
+  <div class="kpi-grid" style="margin-top: 1rem;">
+    <div class="kpi-card esm-card">
+      <span class="kpi-label">Bus</span>
+      <span class="kpi-val text-mint">{{ financialSummary().bus_income | number:'1.3-3' }} DT</span>
+      <small class="text-slate-500">Revenus transport</small>
+    </div>
+    <div class="kpi-card esm-card">
+      <span class="kpi-label">Garderie</span>
+      <span class="kpi-val text-mint">{{ financialSummary().garderie_income | number:'1.3-3' }} DT</span>
+      <small class="text-slate-500">Revenus accueil</small>
+    </div>
+    <div class="kpi-card esm-card">
+      <span class="kpi-label">Étude complémentaire</span>
+      <span class="kpi-val text-mint">{{ financialSummary().etude_income | number:'1.3-3' }} DT</span>
+      <small class="text-slate-500">Revenus tutorat</small>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar esm-card">
+    <div class="filter-group">
+      <label class="form-label">Classe :</label>
+      <select [(ngModel)]="filterClass" class="form-select">
+        <option value="all">Toutes les classes</option>
+        <option value="3ème A">3ème A</option>
+        <option value="1ère A">1ère A</option>
+        <option value="2ème A">2ème A</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label class="form-label">Statut :</label>
+      <select [(ngModel)]="filterStatus" class="form-select">
+        <option value="all">Tous les statuts</option>
+        <option value="paid">Payés uniquement</option>
+        <option value="pending">En attente</option>
+        <option value="overdue">En retard de paiement ⚠️</option>
+      </select>
+    </div>
+
+    <div class="filter-group search-group">
+      <label class="form-label">Recherche élève / référence :</label>
+      <input type="text" [(ngModel)]="searchQuery" class="form-input" placeholder="Nom d'élève ou n° reçu..." />
+    </div>
+  </div>
+
+  <!-- Fees Table -->
+  <div class="esm-card fees-table-card">
+    <div class="esm-table-container">
+      <table class="esm-table">
+        <thead>
+          <tr>
+            <th>Élève</th>
+            <th>Classe</th>
+            <th>Désignation</th>
+            <th>Échéance</th>
+            <th>Montant</th>
+            <th>Statut</th>
+            <th>Mode / Réf</th>
+            <th style="text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let fee of filteredFees()">
+            <td>
+              <strong>{{ fee.student_name }}</strong>
+            </td>
+            <td><span class="badge badge-gold">{{ fee.class_name }}</span></td>
+            <td>{{ fee.label }}</td>
+            <td>{{ fee.due_date | date:'dd/MM/yyyy' }}</td>
+            <td class="font-bold">{{ fee.amount | number:'1.3-3' }} DT</td>
+            <td>
+              <span
+                class="badge"
+                [ngClass]="fee.status === 'paid' ? 'badge-mint' : fee.is_overdue ? 'badge-coral' : 'badge-yellow'"
+              >
+                {{ fee.status === 'paid' ? 'Payé ✓' : fee.is_overdue ? 'En Retard ⚠️' : 'En attente' }}
+              </span>
+            </td>
+            <td>
+              <span *ngIf="fee.status === 'paid'" class="text-xs">
+                {{ fee.method === 'cash' ? 'Espèces' : fee.method === 'cheque' ? 'Chèque' : 'Virement' }}
+                <span *ngIf="fee.reference"> ({{ fee.reference }})</span>
+              </span>
+              <span *ngIf="fee.status !== 'paid'" class="text-slate-400">—</span>
+            </td>
+            <td style="text-align: right;">
+              <button
+                *ngIf="fee.status === 'paid'"
+                class="btn btn-sm btn-primary-gold"
+                (click)="viewReceipt(fee)"
+              >
+                🧾 Reçu PDF
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<app-receipt-modal
+  *ngIf="selectedReceiptFee"
+  [fee]="selectedReceiptFee"
+  (close)="closeReceipt()"
+></app-receipt-modal>

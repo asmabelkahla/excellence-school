@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+*.log
+*.tsbuildinfo
+build-check.txt
+
+# Secrets — only the example file is committed
+.env
+.env.*
+!.env.example

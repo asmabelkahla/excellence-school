@@ -1,0 +1,169 @@
+<div class="calendar-page">
+  <header class="esm-card page-head">
+    <div>
+      <h2 class="esm-card-title">📅 Calendrier scolaire</h2>
+      <p class="text-slate-500">
+        Réunions, examens, sorties, fêtes et vacances de l’école.
+        @if (!canEdit()) { <span class="readonly-note">Consultation seulement.</span> }
+      </p>
+    </div>
+    <div class="legend" aria-label="Légende des catégories">
+      @for (c of categories; track c.id) {
+        <span class="legend-item"><span class="dot" [attr.data-cat]="c.id" aria-hidden="true"></span>{{ c.label }}</span>
+      }
+      @if (auth.currentRole() !== 'parent') { <span class="legend-item">🔒 Privé (personnel)</span> }
+    </div>
+  </header>
+
+  @if (notice()) { <div class="alert alert-success" role="status">✓ {{ notice() }}</div> }
+  @if (error() || cal.error()) { <div class="alert alert-error" role="alert">{{ error() || cal.error() }}</div> }
+
+  <div class="calendar-layout" [class.readonly]="!canEdit()">
+    <section class="esm-card calendar-panel" aria-labelledby="period-title">
+      <div class="toolbar">
+        <div class="nav-group">
+          <button type="button" class="icon-nav" (click)="previous()" [attr.aria-label]="view() === 'month' ? 'Mois précédent' : 'Semaine précédente'">‹</button>
+          <button type="button" class="icon-nav" (click)="next()" [attr.aria-label]="view() === 'month' ? 'Mois suivant' : 'Semaine suivante'">›</button>
+          <button type="button" class="btn btn-sm btn-secondary" (click)="today()">Aujourd’hui</button>
+        </div>
+        <h3 id="period-title" class="period-title">{{ periodTitle() }}</h3>
+        <div class="view-switch" role="tablist" aria-label="Affichage">
+          <button type="button" role="tab" [class.active]="view() === 'month'" [attr.aria-selected]="view() === 'month'" (click)="setView('month')">Mois</button>
+          <button type="button" role="tab" [class.active]="view() === 'week'" [attr.aria-selected]="view() === 'week'" (click)="setView('week')">Semaine</button>
+        </div>
+      </div>
+
+      @if (view() === 'month') {
+        <div class="month-grid">
+          @for (name of weekdayNames; track name) { <div class="weekday" aria-hidden="true">{{ name }}</div> }
+          @for (day of monthDays(); track day.key) {
+            <button type="button" class="month-cell"
+                    [class.out]="!day.inMonth" [class.today]="day.isToday" [class.selected]="day.key === selectedDate()"
+                    (click)="selectDate(day.key)" (dblclick)="canEdit() && openCreateForDate(day.key)"
+                    [attr.aria-label]="(day.date | date:'EEEE d MMMM') + (day.events.length ? ', ' + day.events.length + ' événement(s)' : '')">
+              <span class="day-num">{{ day.date | date:'d' }}</span>
+              <span class="chips">
+                @for (evt of day.events.slice(0, 2); track evt.id) {
+                  <span class="chip" [attr.data-cat]="evt.category">@if (evt.visibility === 'private') {🔒 }{{ evt.title }}</span>
+                }
+                @if (day.events.length > 2) { <span class="more">+{{ day.events.length - 2 }}</span> }
+              </span>
+              <!-- Phones: dots instead of titles -->
+              @if (day.events.length) {
+                <span class="dots" aria-hidden="true">
+                  @for (evt of day.events.slice(0, 3); track evt.id) { <span class="dot" [attr.data-cat]="evt.category"></span> }
+                </span>
+              }
+            </button>
+          }
+        </div>
+        <p class="hint">{{ monthEventCount() }} événement(s) ce mois-ci@if (canEdit()) { · double-cliquez sur un jour pour y ajouter un événement}.</p>
+      } @else {
+        <div class="week-grid">
+          @for (day of weekDays(); track day.key) {
+            <button type="button" class="week-day" [class.today]="day.isToday" [class.selected]="day.key === selectedDate()" (click)="selectDate(day.key)">
+              <span class="week-head"><span>{{ day.date | date:'EEE' }}</span><strong>{{ day.date | date:'d' }}</strong></span>
+              @for (evt of day.events; track evt.id) {
+                <span class="chip" [attr.data-cat]="evt.category">
+                  @if (evt.visibility === 'private') { 🔒 }
+                  @if (!evt.all_day) { <small>{{ evt.starts_at | date:'HH:mm' }}</small> }
+                  {{ evt.title }}
+                </span>
+              } @empty {
+                <span class="empty">—</span>
+              }
+            </button>
+          }
+        </div>
+      }
+    </section>
+
+    <aside class="side">
+      <section class="esm-card day-panel" aria-labelledby="day-title">
+        <div class="day-panel-head">
+          <h3 id="day-title">{{ selectedDate() | date:'EEEE d MMMM yyyy' }}</h3>
+          @if (canEdit()) {
+            <button type="button" class="btn btn-sm btn-primary-gold" (click)="openCreateForDate(selectedDate())">+ Ajouter</button>
+          }
+        </div>
+        @for (evt of selectedDayEvents; track evt.id) {
+          <article class="event-card" [attr.data-cat]="evt.category">
+            <div class="event-top">
+              <span class="cat-tag" [attr.data-cat]="evt.category">{{ categoryLabel(evt.category) }}</span>
+              @if (evt.visibility === 'private') { <span class="private-tag" title="Visible par le personnel uniquement">🔒 Privé</span> }
+              <small>{{ formatTimeRange(evt) }}</small>
+            </div>
+            <h4>{{ evt.title }}</h4>
+            @if (evt.description) { <p>{{ evt.description }}</p> }
+            @if (canEdit()) {
+              <div class="event-actions">
+                <button type="button" class="btn btn-sm btn-outline-gold" (click)="openEditEvent(evt)">Modifier</button>
+                <button type="button" class="btn btn-sm btn-outline-danger" (click)="deleteEvent(evt)">Supprimer</button>
+              </div>
+            }
+          </article>
+        } @empty {
+          <p class="empty-day">Aucun événement ce jour-là.</p>
+        }
+      </section>
+
+      @if (canEdit()) {
+        <form class="esm-card form-panel" (ngSubmit)="saveEvent()" novalidate [class.editing]="editingEventId()">
+          <h3>{{ editingEventId() ? 'Modifier l’événement' : 'Nouvel événement' }}</h3>
+          <label class="field"><span>Titre *</span>
+            <input class="form-input" name="title" maxlength="120" required placeholder="Ex. Réunion parents-enseignants"
+                   [ngModel]="form().title" (ngModelChange)="patchForm({ title: $event })" />
+          </label>
+          <div class="two-col">
+            <label class="field"><span>Catégorie</span>
+              <select class="form-select" name="category" [ngModel]="form().category" (ngModelChange)="patchForm({ category: $event })">
+                @for (c of categories; track c.id) { <option [value]="c.id">{{ c.label }}</option> }
+              </select>
+            </label>
+            <label class="field"><span>Date *</span>
+              <input class="form-input" type="date" name="date" required [ngModel]="form().date" (ngModelChange)="patchForm({ date: $event })" />
+            </label>
+          </div>
+          <fieldset class="visibility">
+            <legend>Qui peut le voir ?</legend>
+            <label class="vis-option" [class.active]="form().visibility === 'public'">
+              <input type="radio" name="visibility" value="public" [ngModel]="form().visibility" (ngModelChange)="patchForm({ visibility: $event })" />
+              <span><strong>🌍 Public</strong><small>Parents et personnel</small></span>
+            </label>
+            <label class="vis-option" [class.active]="form().visibility === 'private'">
+              <input type="radio" name="visibility" value="private" [ngModel]="form().visibility" (ngModelChange)="patchForm({ visibility: $event })" />
+              <span><strong>🔒 Privé</strong><small>Personnel uniquement</small></span>
+            </label>
+          </fieldset>
+          <label class="check-row">
+            <input type="checkbox" name="all_day" [ngModel]="form().all_day" (ngModelChange)="patchForm({ all_day: $event })" />
+            Toute la journée
+          </label>
+          @if (!form().all_day) {
+            <div class="two-col">
+              <label class="field"><span>Début</span>
+                <input class="form-input" type="time" name="start_time" [ngModel]="form().start_time" (ngModelChange)="patchForm({ start_time: $event })" />
+              </label>
+              <label class="field"><span>Fin</span>
+                <input class="form-input" type="time" name="end_time" [ngModel]="form().end_time" (ngModelChange)="patchForm({ end_time: $event })" />
+              </label>
+            </div>
+          }
+          <label class="field"><span>Description</span>
+            <textarea class="form-input" name="description" rows="3" maxlength="1000" placeholder="Lieu, horaires, informations utiles…"
+                      [ngModel]="form().description" (ngModelChange)="patchForm({ description: $event })"></textarea>
+          </label>
+          <div class="form-actions">
+            @if (editingEventId()) {
+              <button type="button" class="btn btn-secondary" (click)="cancelEdit()">Annuler</button>
+            }
+            <button type="submit" class="btn btn-primary-gold" [disabled]="!form().title.trim() || !form().date || saving()">
+              @if (saving()) { <span class="btn-spinner" aria-hidden="true"></span> }
+              {{ editingEventId() ? 'Enregistrer' : 'Créer l’événement' }}
+            </button>
+          </div>
+        </form>
+      }
+    </aside>
+  </div>
+</div>

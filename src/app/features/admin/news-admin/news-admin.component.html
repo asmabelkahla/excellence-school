@@ -1,0 +1,89 @@
+<div class="news-admin-page">
+  <div class="news-top-bar esm-card">
+    <div>
+      <h2 class="esm-card-title">📢 Publication des Actualités de l'École</h2>
+      <p class="text-slate-500">Fil d'actualité bilingue affiché en accueil des parents et enseignants.</p>
+    </div>
+
+    <button class="btn btn-primary-gold" (click)="showNewModal = true">
+      + Rédiger une Actualité
+    </button>
+  </div>
+
+  <div *ngIf="successMessage" class="alert-success">
+    ✓ {{ successMessage }}
+  </div>
+
+  <div class="news-grid">
+    <div *ngFor="let item of schoolData.news()" class="news-admin-card esm-card" [class.pinned]="item.pinned">
+      <div class="card-top">
+        <span class="badge" [ngClass]="item.category === 'trip' ? 'badge-sky' : item.category === 'celebration' ? 'badge-yellow' : 'badge-coral'">
+          {{ item.category }}
+        </span>
+        <span class="badge badge-gold" *ngIf="item.pinned">⭐ Épinglé en haut</span>
+        <span class="date text-slate-500">{{ item.publish_at | date:'dd/MM/yyyy' }}</span>
+      </div>
+
+      <h3 class="title-fr">{{ item.title_fr }}</h3>
+      <h4 class="title-ar text-slate-600" dir="rtl" *ngIf="item.title_ar">{{ item.title_ar }}</h4>
+      <p class="body-text">{{ item.body_fr }}</p>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Compose News -->
+<div class="esm-modal-backdrop" *ngIf="showNewModal" (click)="showNewModal = false">
+  <div class="esm-modal-container" (click)="$event.stopPropagation()">
+    <div class="esm-card-header">
+      <h3 class="esm-card-title">📢 Nouvelle Actualité / Annonce</h3>
+      <button class="close-btn" (click)="showNewModal = false">✕</button>
+    </div>
+
+    <form (ngSubmit)="publishNews()">
+      <div class="form-group">
+        <label class="form-label">Titre en Français *</label>
+        <input type="text" [(ngModel)]="titleFr" name="titleFr" class="form-input" placeholder="Ex: Célébration de la fête de la science" required />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Titre en Arabe (العنوان بالعربية)</label>
+        <input type="text" [(ngModel)]="titleAr" name="titleAr" class="form-input" dir="rtl" placeholder="مثال : الاحتفال بيوم العلم وشغف المطالعة" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Texte de l'actualité (Français)</label>
+        <textarea [(ngModel)]="bodyFr" name="bodyFr" class="form-textarea" rows="3"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">النص بالعربية</label>
+        <textarea [(ngModel)]="bodyAr" name="bodyAr" class="form-textarea" dir="rtl" rows="3"></textarea>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Catégorie *</label>
+          <select [(ngModel)]="category" name="category" class="form-select">
+            <option value="event">Événement</option>
+            <option value="trip">Sortie scolaire</option>
+            <option value="celebration">Fête & Culture</option>
+            <option value="info">Information générale</option>
+            <option value="reminder">Rappel important</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1.75rem;">
+          <input type="checkbox" [(ngModel)]="pinned" name="pinned" id="pinnedCheck" />
+          <label for="pinnedCheck" class="font-bold text-slate-800" style="margin: 0; cursor: pointer;">
+            ⭐ Épingler en haut du fil
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem;">
+        <button type="button" class="btn btn-secondary" (click)="showNewModal = false">Annuler</button>
+        <button type="submit" class="btn btn-primary-gold" [disabled]="!titleFr">Publier l'Actualité</button>
+      </div>
+    </form>
+  </div>
+</div>

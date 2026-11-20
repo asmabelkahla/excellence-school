@@ -1,0 +1,118 @@
+<div class="fees-page">
+  <!-- Header -->
+  <div class="fees-header esm-card">
+    <div>
+      <h2 class="esm-card-title">💳 {{ i18n.t('feesTitle') }}</h2>
+      <p class="text-slate-500">
+        Échéancier des frais et reçus pour <strong>{{ auth.selectedStudent()?.first_name }} {{ auth.selectedStudent()?.last_name }}</strong>
+        ({{ auth.selectedStudent()?.class_name }})
+      </p>
+    </div>
+
+    <div class="currency-badge badge badge-gold">
+      Devise : Dinar Tunisien (TND / د.ت)
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="summary-cards-grid">
+    <div class="summary-card esm-card">
+      <span class="card-icon">✅</span>
+      <div class="card-info">
+        <small>Total Réglé (Payé)</small>
+        <strong class="text-mint">{{ totals().totalPaid | number:'1.3-3' }} DT</strong>
+      </div>
+    </div>
+
+    <div class="summary-card esm-card">
+      <span class="card-icon">⏳</span>
+      <div class="card-info">
+        <small>À Venir (En attente)</small>
+        <strong class="text-yellow">{{ totals().totalPending | number:'1.3-3' }} DT</strong>
+      </div>
+    </div>
+
+    <div class="summary-card esm-card">
+      <span class="card-icon">⚠️</span>
+      <div class="card-info">
+        <small>En Retard de paiement</small>
+        <strong class="text-coral">{{ totals().totalOverdue | number:'1.3-3' }} DT</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment Table -->
+  <div class="esm-card fee-table-card">
+    <div class="esm-card-header">
+      <h3 class="esm-card-title">Échéancier Détaillé des Frais Scolaires</h3>
+    </div>
+
+    <div class="esm-table-container">
+      <table class="esm-table">
+        <thead>
+          <tr>
+            <th>Désignation des Frais</th>
+            <th>Échéance</th>
+            <th>Montant (TND)</th>
+            <th>Statut</th>
+            <th>Mode & Date</th>
+            <th style="text-align: right;">Reçu Officiel</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let fee of childFees()">
+            <td>
+              <strong>{{ fee.label }}</strong>
+            </td>
+            <td>{{ fee.due_date | date:'dd/MM/yyyy' }}</td>
+            <td class="font-bold">
+              {{ fee.amount | number:'1.3-3' }} DT
+            </td>
+            <td>
+              <span
+                class="badge"
+                [ngClass]="fee.status === 'paid' ? 'badge-mint' : fee.is_overdue ? 'badge-coral' : 'badge-yellow'"
+              >
+                {{ fee.status === 'paid' ? 'Payé ✓' : fee.is_overdue ? 'En Retard ⚠️' : 'À régler' }}
+              </span>
+            </td>
+            <td>
+              <div *ngIf="fee.status === 'paid'; else notPaidTpl">
+                <span class="text-slate-800 font-bold">
+                  {{ fee.method === 'cash' ? 'Espèces' : fee.method === 'cheque' ? 'Chèque' : 'Virement' }}
+                </span>
+                <small class="text-slate-500" style="display: block;">Payé le {{ fee.paid_at | date:'dd/MM/yyyy' }}</small>
+              </div>
+              <ng-template #notPaidTpl>
+                <span class="text-slate-400">—</span>
+              </ng-template>
+            </td>
+            <td style="text-align: right;">
+              <button
+                *ngIf="fee.status === 'paid'"
+                class="btn btn-sm btn-primary-gold"
+                (click)="viewReceipt(fee)"
+              >
+                🧾 Reçu PDF
+              </button>
+              <span *ngIf="fee.status !== 'paid'" class="text-slate-400 text-xs">
+                Règlement à la caisse
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bursar-note">
+      <span>ℹ️ <strong>Rappel :</strong> Les règlements se font directement auprès de l'Économe de l'école (espèces, chèque à l'ordre d'Excellence School, ou virement bancaire). Le reçu officiel est généré instantanément dès l'enregistrement en caisse.</span>
+    </div>
+  </div>
+</div>
+
+<!-- Receipt Modal Popup -->
+<app-receipt-modal
+  *ngIf="selectedReceiptFee"
+  [fee]="selectedReceiptFee"
+  (close)="closeReceipt()"
+></app-receipt-modal>

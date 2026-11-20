@@ -1,0 +1,92 @@
+<div class="auth-shell">
+  <app-auth-brand-panel></app-auth-brand-panel>
+
+  <main class="auth-panel">
+    <div class="auth-topbar">
+      <button type="button" class="auth-lang-toggle" (click)="i18n.toggleLocale()">
+        {{ i18n.isRtl() ? 'Français' : 'العربية' }}
+      </button>
+    </div>
+
+    <div class="auth-card">
+      <div class="auth-mobile-logo">
+        <img src="assets/logo-excellence-school-monastir.jpg" alt="" />
+        <strong>{{ i18n.t('appName') }}</strong>
+      </div>
+
+      <h1 class="auth-title">{{ i18n.t('welcomeBack') }}</h1>
+      <p class="auth-subtitle">{{ i18n.t('loginDesc') }}</p>
+
+      @if (sessionExpired && !errorMsg()) {
+        <div class="alert alert-info" role="status">{{ i18n.t('sessionExpired') }}</div>
+      }
+
+      @if (errorMsg()) {
+        <div class="alert alert-error" role="alert" id="login-error">{{ errorMsg() }}</div>
+      }
+
+      <form (ngSubmit)="onSubmit()" novalidate class="login-form">
+        <div class="form-group">
+          <label class="form-label" for="identifier">{{ i18n.t('emailOrPhone') }}</label>
+          <input
+            id="identifier"
+            type="text"
+            [(ngModel)]="identifier"
+            name="identifier"
+            class="form-input"
+            placeholder="exemple@excellence.tn"
+            autocomplete="username"
+            autocapitalize="off"
+            spellcheck="false"
+            [attr.aria-invalid]="!!errorMsg()"
+            [attr.aria-describedby]="errorMsg() ? 'login-error' : null"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">{{ i18n.t('password') }}</label>
+          <div class="password-field">
+            <input
+              id="password"
+              [type]="showPassword() ? 'text' : 'password'"
+              [(ngModel)]="password"
+              name="password"
+              class="form-input"
+              autocomplete="current-password"
+              [attr.aria-invalid]="!!errorMsg()"
+              required
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              (click)="showPassword.set(!showPassword())"
+              [attr.aria-label]="i18n.t(showPassword() ? 'hidePassword' : 'showPassword')"
+              [attr.aria-pressed]="showPassword()"
+            >
+              @if (showPassword()) {
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              } @else {
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              }
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary-gold btn-block" [disabled]="loading()">
+          @if (loading()) {
+            <span class="btn-spinner" aria-hidden="true"></span>
+            {{ i18n.t('signingIn') }}
+          } @else {
+            {{ i18n.t('signIn') }}
+          }
+        </button>
+      </form>
+
+      <p class="auth-footer-link">
+        {{ i18n.t('registerPrompt') }}
+        <a routerLink="/register">{{ i18n.t('registerHere') }}</a>
+      </p>
+    </div>
+  </main>
+</div>

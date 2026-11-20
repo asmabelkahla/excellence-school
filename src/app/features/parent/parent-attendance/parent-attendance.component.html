@@ -1,0 +1,140 @@
+<div class="attendance-page">
+  <!-- Header -->
+  <div class="attendance-header esm-card">
+    <div>
+      <h2 class="esm-card-title">📅 {{ i18n.t('navAttendance') }}</h2>
+      <p class="text-slate-500">
+        Suivi de l'assiduité pour <strong>{{ auth.selectedStudent()?.first_name }} {{ auth.selectedStudent()?.last_name }}</strong>
+        ({{ auth.selectedStudent()?.class_name }})
+      </p>
+    </div>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="stats-row">
+    <div class="stat-card esm-card">
+      <span class="stat-icon">⚠️</span>
+      <div class="stat-info">
+        <small>Total Absences</small>
+        <strong class="text-coral">{{ stats().totalAbsences }}</strong>
+      </div>
+    </div>
+
+    <div class="stat-card esm-card">
+      <span class="stat-icon">✅</span>
+      <div class="stat-info">
+        <small>Absences Justifiées</small>
+        <strong class="text-mint">{{ stats().justified }}</strong>
+      </div>
+    </div>
+
+    <div class="stat-card esm-card">
+      <span class="stat-icon">❓</span>
+      <div class="stat-info">
+        <small>Non Justifiées</small>
+        <strong class="text-yellow">{{ stats().unjustified }}</strong>
+      </div>
+    </div>
+
+    <div class="stat-card esm-card">
+      <span class="stat-icon">⏰</span>
+      <div class="stat-info">
+        <small>Retards</small>
+        <strong class="text-slate-700">{{ stats().totalLates }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attendance Log Table -->
+  <div class="esm-card attendance-table-card">
+    <div class="esm-card-header">
+      <h3 class="esm-card-title">Historique des Présences & Absences</h3>
+    </div>
+
+    <div class="esm-table-container">
+      <table class="esm-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Statut</th>
+            <th>Justification</th>
+            <th style="text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let record of childAttendance()">
+            <td>
+              <strong>{{ record.day | date:'EEEE dd MMMM yyyy' }}</strong>
+            </td>
+            <td>
+              <span class="badge" [ngClass]="record.status === 'present' ? 'badge-mint' : record.status === 'late' ? 'badge-yellow' : 'badge-coral'">
+                {{ record.status === 'present' ? i18n.t('present') : record.status === 'late' ? i18n.t('late') : i18n.t('absent') }}
+              </span>
+            </td>
+            <td>
+              <div *ngIf="record.justification; else noJustifTpl">
+                <span class="text-mint font-bold">✓ Justifié :</span>
+                <span class="text-slate-600"> {{ record.justification.reason }}</span>
+                <div *ngIf="record.justification.attachment_path">
+                  <small class="badge badge-sky">📎 Certificat joint</small>
+                </div>
+              </div>
+              <ng-template #noJustifTpl>
+                <span class="text-coral" *ngIf="record.status === 'absent'">⚠️ En attente de justification</span>
+                <span class="text-slate-400" *ngIf="record.status !== 'absent'">—</span>
+              </ng-template>
+            </td>
+            <td style="text-align: right;">
+              <button
+                *ngIf="record.status === 'absent'"
+                class="btn btn-sm btn-outline-gold"
+                (click)="openJustifyModal(record)"
+              >
+                {{ record.justification ? 'Modifier Justification' : i18n.t('justifyAbsence') }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Absence Justification Modal (CDC 3.3) -->
+<div class="esm-modal-backdrop" *ngIf="showJustifyModal" (click)="showJustifyModal = false">
+  <div class="esm-modal-container" (click)="$event.stopPropagation()">
+    <div class="esm-card-header">
+      <h3 class="esm-card-title">📝 {{ i18n.t('justifyAbsence') }}</h3>
+      <button class="close-btn" (click)="showJustifyModal = false">✕</button>
+    </div>
+
+    <p class="modal-desc">
+      Absence du <strong>{{ selectedAttendance?.day | date:'dd MMMM yyyy' }}</strong> pour {{ auth.selectedStudent()?.first_name }}.
+    </p>
+
+    <div class="form-group">
+      <label class="form-label">{{ i18n.t('justificationReason') }} *</label>
+      <textarea
+        [(ngModel)]="justificationReason"
+        class="form-textarea"
+        rows="3"
+        placeholder="Précisez le motif de l'absence (maladie, urgence familiale, consultation médicale...)"
+      ></textarea>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">{{ i18n.t('medicalCert') }}</label>
+      <input type="file" (change)="onFileSelected($event)" class="form-input" accept=".pdf,image/*" />
+      <small class="text-slate-500" *ngIf="attachmentFileName">
+        Fichier sélectionné : <strong>{{ attachmentFileName }}</strong>
+      </small>
+    </div>
+
+    <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem;">
+      <button class="btn btn-secondary" (click)="showJustifyModal = false">{{ i18n.t('cancel') }}</button>
+      <button class="btn btn-primary-gold" (click)="submitJustification()" [disabled]="!justificationReason">
+        {{ i18n.t('submitJustification') }}
+      </button>
+    </div>
+  </div>
+</div>

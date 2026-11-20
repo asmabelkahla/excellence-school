@@ -1,0 +1,42 @@
+<div class="timetable-page">
+  <div class="timetable-header esm-card">
+    <div>
+      <h2 class="esm-card-title">⏰ {{ i18n.t('navTimetable') }}</h2>
+      <p class="text-slate-500">
+        Planning hebdomadaire de la classe <strong>{{ auth.selectedStudent()?.class_name || '3ème A' }}</strong>
+        • Année 2026-2027
+      </p>
+    </div>
+  </div>
+
+  <!-- Weekly Timetable Grid -->
+  <div class="week-grid">
+    <div *ngFor="let day of days" class="day-column esm-card">
+      <div class="day-header">
+        <span class="day-name">{{ i18n.isRtl() ? day.nameAr : day.nameFr }}</span>
+        <small class="day-name-alt" *ngIf="!i18n.isRtl()">{{ day.nameAr }}</small>
+      </div>
+
+      <div class="slots-list">
+        <div *ngFor="let slot of getSlotsForDay(day.num)" class="slot-card">
+          <div class="slot-time">
+            🕒 {{ slot.starts_at }} - {{ slot.ends_at }}
+          </div>
+          <div class="slot-subject font-bold">
+            {{ i18n.isRtl() && slot.subject_name_ar ? slot.subject_name_ar : slot.subject_name }}
+          </div>
+          <div class="slot-teacher">
+            👩‍🏫 {{ slot.teacher_name }}
+          </div>
+          <div class="slot-room badge badge-sky" *ngIf="slot.room">
+            📍 {{ slot.room }}
+          </div>
+        </div>
+
+        <div *ngIf="getSlotsForDay(day.num).length === 0" class="no-slots">
+          <span>Pas de cours</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

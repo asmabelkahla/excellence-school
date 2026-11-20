@@ -1,0 +1,46 @@
+.attendance-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+
+  .stat-icon {
+    font-size: 2rem;
+  }
+
+  .stat-info {
+    display: flex;
+    flex-direction: column;
+
+    small {
+      font-size: 0.8rem;
+      color: var(--slate-500);
+      font-weight: 700;
+    }
+
+    strong {
+      font-size: 1.5rem;
+      font-weight: 900;
+    }
+
+    .text-coral { color: var(--coral-primary); }
+    .text-mint { color: var(--mint-primary); }
+    .text-yellow { color: var(--yellow-primary); }
+  }
+}
+
+.attendance-table-card {
+  padding: 1.5rem;
+}

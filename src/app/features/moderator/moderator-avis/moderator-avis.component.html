@@ -1,0 +1,81 @@
+<div class="avis-page">
+  <header class="esm-card page-head">
+    <div>
+      <h2 class="esm-card-title">💬 Avis du site</h2>
+      <p class="text-slate-500">Les avis des familles n’apparaissent sur le site qu’après votre validation.</p>
+    </div>
+    <button type="button" class="btn btn-primary-gold" (click)="showForm.set(!showForm())" [attr.aria-expanded]="showForm()">
+      {{ showForm() ? 'Fermer' : '+ Ajouter un avis' }}
+    </button>
+  </header>
+
+  @if (notice()) { <div class="alert alert-success" role="status">✓ {{ notice() }}</div> }
+
+  @if (showForm()) {
+    <form class="esm-card add-form" (ngSubmit)="add()" novalidate>
+      <h3 class="esm-card-title">Nouvel avis</h3>
+      <div class="grid">
+        <label class="field"><span>Auteur *</span>
+          <input class="form-input" name="author" maxlength="80" required [(ngModel)]="form.author" placeholder="Ex. Famille Ben Ali" />
+        </label>
+        <label class="field"><span>Catégorie</span>
+          <select class="form-select" name="category" [(ngModel)]="form.category">
+            @for (c of categories; track c) { <option [value]="c">{{ categoryLabels[c] }}</option> }
+          </select>
+        </label>
+        <label class="field full"><span>Titre *</span>
+          <input class="form-input" name="title" maxlength="120" required [(ngModel)]="form.title" />
+        </label>
+        <label class="field full"><span>Message *</span>
+          <textarea class="form-input" name="message" rows="4" maxlength="2000" required [(ngModel)]="form.message"></textarea>
+        </label>
+      </div>
+      <div class="form-actions">
+        <label class="check"><input type="checkbox" name="publishNow" [(ngModel)]="form.publishNow" /> Publier directement</label>
+        <button type="submit" class="btn btn-primary-gold" [disabled]="!form.author.trim() || !form.title.trim() || !form.message.trim()">Ajouter</button>
+      </div>
+    </form>
+  }
+
+  <div class="filters" role="tablist" aria-label="Filtrer les avis">
+    @for (f of filters; track f.id) {
+      <button type="button" role="tab" [class.active]="filter() === f.id" [attr.aria-selected]="filter() === f.id" (click)="filter.set(f.id)">
+        {{ f.label }} <span class="count">{{ counts()[f.id] }}</span>
+      </button>
+    }
+  </div>
+
+  <div class="review-list">
+    @for (r of visible(); track r.id) {
+      <article class="esm-card review" [attr.data-status]="r.status">
+        <div class="review-head">
+          <span class="avatar" aria-hidden="true">{{ initials(r.author_name) }}</span>
+          <div class="who">
+            <strong>{{ r.author_name }}</strong>
+            <small>{{ categoryLabels[r.category] || r.category }} · {{ r.created_at | date:'dd/MM/yyyy' }}</small>
+          </div>
+          <span class="status" [attr.data-status]="r.status">{{ statusLabels[r.status] }}</span>
+        </div>
+        <h4>{{ r.title }}</h4>
+        <p>{{ r.message }}</p>
+        <div class="actions">
+          @if (r.status !== 'published') {
+            <button type="button" class="btn btn-sm btn-primary-gold" (click)="setStatus(r, 'published')">Publier</button>
+          }
+          @if (r.status !== 'archived') {
+            <button type="button" class="btn btn-sm btn-outline-gold" (click)="setStatus(r, 'archived')">Archiver</button>
+          }
+          @if (r.status === 'archived') {
+            <button type="button" class="btn btn-sm btn-secondary" (click)="setStatus(r, 'pending')">Remettre en modération</button>
+          }
+          <button type="button" class="btn btn-sm btn-outline-danger" (click)="remove(r)">Supprimer</button>
+        </div>
+      </article>
+    } @empty {
+      <div class="esm-card empty">
+        <span aria-hidden="true">{{ filter() === 'pending' ? '✅' : '💬' }}</span>
+        <p>{{ filter() === 'pending' ? 'Aucun avis à modérer.' : 'Aucun avis dans cette catégorie.' }}</p>
+      </div>
+    }
+  </div>
+</div>

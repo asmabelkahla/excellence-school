@@ -1,0 +1,154 @@
+.admin-dashboard-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.school-lead {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+
+  .admin-logo {
+    height: 64px;
+    width: auto;
+    object-fit: contain;
+  }
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+
+  .kpi-card {
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    &.highlight {
+      border: 1.5px solid var(--coral-border);
+      background-color: var(--coral-light);
+      flex-wrap: wrap;
+      row-gap: 0.6rem;
+
+      .btn {
+        flex: 1 0 100%;
+        background: #FFFFFF;
+      }
+    }
+
+    .icon {
+      font-size: 2.25rem;
+    }
+
+    .info {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+
+      small {
+        font-size: 0.8rem;
+        color: var(--slate-500);
+        font-weight: 700;
+      }
+
+      strong {
+        font-size: 1.4rem;
+        font-weight: 900;
+        color: var(--slate-900);
+      }
+
+      .text-coral { color: var(--coral-primary); }
+      .text-mint { color: var(--mint-primary); }
+    }
+  }
+}
+
+.agenda-mini-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.agenda-item {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.agenda-date {
+  flex: none;
+  width: 3.25rem;
+  padding: 0.35rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--gold-50);
+  border: 1px solid var(--gold-200);
+  line-height: 1.1;
+
+  strong { font-size: 1.15rem; font-weight: 900; color: var(--gold-800); }
+  span { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: var(--gold-700); }
+}
+
+.agenda-detail {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  strong { font-size: 0.92rem; color: var(--slate-900); }
+  small { font-size: 0.78rem; color: var(--slate-500); text-transform: capitalize; }
+}
+
+.admin-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1.25rem;
+}
+
+.quick-requests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+
+  .req-mini-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.65rem 0.85rem;
+    background: var(--slate-50);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--slate-200);
+  }
+}
+
+.bulletin-stat-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px dashed var(--slate-200);
+    font-size: 0.9rem;
+  }
+}
+
+.news-mini-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  .news-mini-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--slate-100);
+  }
+}

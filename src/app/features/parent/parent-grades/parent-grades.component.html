@@ -1,0 +1,213 @@
+<div class="grades-page">
+  <header class="grades-header esm-card no-print">
+    <div>
+      <h2 class="esm-card-title">📊 Notes et bulletins</h2>
+      @if (auth.selectedStudent(); as child) {
+        <p class="text-slate-500">
+          Suivi scolaire de <strong>{{ child.first_name }} {{ child.last_name }}</strong>
+          @if (child.class_name) { · {{ child.class_name }} }
+        </p>
+      }
+    </div>
+
+    <div class="trimester-selector" role="tablist" aria-label="Trimestre">
+      @for (t of trimesters; track t) {
+        <button type="button" role="tab" class="trimester-btn" [class.active]="selectedTrimester() === t"
+                [attr.aria-selected]="selectedTrimester() === t" (click)="selectTrimester(t)">
+          {{ trimesterLabel(t) }}
+          <small>{{ isPublished(t) ? '✓ publié' : 'à venir' }}</small>
+        </button>
+      }
+    </div>
+  </header>
+
+  @if (!auth.selectedStudent()) {
+    <div class="no-card-box esm-card">
+      <div class="empty-icon" aria-hidden="true">👨‍👩‍👧</div>
+      <h3>Aucun enfant rattaché</h3>
+      <p class="text-slate-500">Les bulletins apparaîtront ici dès qu’un enfant sera rattaché à votre compte.</p>
+      <a routerLink="/parent/dashboard" class="btn btn-primary-gold">Voir mes enfants</a>
+    </div>
+  } @else if (loading()) {
+    <div class="no-card-box esm-card"><p class="text-slate-500">Chargement des bulletins…</p></div>
+  } @else if (error()) {
+    <div class="alert alert-error" role="alert">
+      {{ error() }}
+      <button type="button" class="btn btn-sm btn-secondary" (click)="load(auth.selectedStudent()?.id ?? null)">Réessayer</button>
+    </div>
+  } @else if (card()) {
+    @let rc = card()!;
+
+    <!-- 1. Summary -->
+    <section class="summary-grid no-print" aria-label="Résumé du trimestre">
+      <div class="stat-tile main">
+        <span class="stat-label">Moyenne générale</span>
+        <span class="stat-value">{{ rc.general_average != null ? (rc.general_average | number:'1.2-2') : '—' }}<small>/20</small></span>
+        @if (evolution() !== null) {
+          <span class="stat-trend" [class.up]="evolution()! > 0" [class.down]="evolution()! < 0">
+            {{ evolution()! > 0 ? '▲ +' : evolution()! < 0 ? '▼ ' : '= ' }}{{ evolution() | number:'1.2-2' }}
+            <span class="sr-only">points</span> depuis le {{ trimesterLabel(previousCard()!.trimester) }}
+          </span>
+        }
+      </div>
+      <div class="stat-tile">
+        <span class="stat-label">Rang</span>
+        <span class="stat-value">{{ rc.rank ?? '—' }}<small>{{ rc.rank === 1 ? 'er' : 'e' }} / {{ rc.class_size ?? '—' }}</small></span>
+        <span class="stat-note">élèves dans la classe</span>
+      </div>
+      <div class="stat-tile">
+        <span class="stat-label">Moyenne de la classe</span>
+        <span class="stat-value">{{ rc.class_average != null ? (rc.class_average | number:'1.2-2') : '—' }}<small>/20</small></span>
+        <span class="stat-note">de {{ rc.class_min_average | number:'1.2-2' }} à {{ rc.class_max_average | number:'1.2-2' }}</span>
+      </div>
+      <div class="stat-tile">
+        <span class="stat-label">Distinction</span>
+        <span class="stat-value mention">{{ rc.mention || '—' }}</span>
+        <span class="stat-note">Publié le {{ rc.published_at | date:'dd/MM/yyyy' }}</span>
+      </div>
+    </section>
+
+    <div class="insights-grid no-print">
+      <!-- 2. By domain -->
+      <section class="esm-card domains-card" aria-labelledby="domains-title">
+        <h3 class="esm-card-title" id="domains-title">Résultats par domaine</h3>
+        <p class="chart-hint">
+          Note sur 20 <span class="legend-tick" aria-hidden="true"></span> moyenne de la classe
+        </p>
+        @for (dom of rc.content.domains; track dom.domain_id) {
+          <div class="domain-block">
+            <div class="domain-head">
+              <strong>{{ dom.name_fr }}</strong>
+              <span class="domain-avg">{{ dom.domain_average != null ? (dom.domain_average | number:'1.2-2') : '—' }}/20</span>
+            </div>
+            <ul class="subject-bars">
+              @for (s of dom.subjects; track s.subject_id) {
+                <li [attr.title]="s.name_fr + ' : ' + (s.score_20 ?? '—') + '/20 — moyenne de la classe ' + (s.class_average ?? '—')">
+                  <span class="subject-name">{{ s.name_fr }}</span>
+                  <span class="bar-track" aria-hidden="true">
+                    <span class="bar-fill" [style.width.%]="pct(s.score_20)"></span>
+                    @if (s.class_average != null) {
+                      <span class="bar-tick" [style.left.%]="pct(s.class_average)"></span>
+                    }
+                  </span>
+                  <span class="subject-score">
+                    {{ s.score_20 != null ? (s.score_20 | number:'1.1-2') : '—' }}
+                    <span class="sr-only">sur 20, moyenne de la classe {{ s.class_average }}</span>
+                  </span>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      </section>
+
+      <div class="side-column">
+        <!-- 3. Strengths / to work on -->
+        <section class="esm-card" aria-labelledby="strengths-title">
+          <h3 class="esm-card-title" id="strengths-title">Points forts</h3>
+          @if (strengths().length) {
+            <ul class="insight-list">
+              @for (s of strengths(); track s.name) {
+                <li>
+                  <span class="insight-icon good" aria-hidden="true">★</span>
+                  <span><strong>{{ s.name }}</strong> — {{ s.score | number:'1.1-2' }}/20
+                    @if (s.gap !== null && s.gap > 0) { <small>(+{{ s.gap | number:'1.1-2' }} au-dessus de la classe)</small> }</span>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="text-slate-500 text-sm">Pas de matière au-dessus de 12/20 ce trimestre.</p>
+          }
+
+          <h3 class="esm-card-title sub-title">À renforcer</h3>
+          @if (toWorkOn().length) {
+            <ul class="insight-list">
+              @for (s of toWorkOn(); track s.name) {
+                <li>
+                  <span class="insight-icon warn" aria-hidden="true">!</span>
+                  <span><strong>{{ s.name }}</strong> — {{ s.score | number:'1.1-2' }}/20
+                    @if (s.gap !== null && s.gap < 0) { <small>({{ s.gap | number:'1.1-2' }} sous la classe)</small> }</span>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="text-slate-500 text-sm">Aucune matière sous 10/20 ni nettement sous la moyenne de la classe. 👏</p>
+          }
+        </section>
+
+        <!-- 4. Progress across trimesters -->
+        <section class="esm-card" aria-labelledby="progress-title">
+          <h3 class="esm-card-title" id="progress-title">Évolution de la moyenne</h3>
+          <div class="progress-chart" role="img"
+               [attr.aria-label]="'Moyenne générale : ' + (averageOf(1) ?? 'non publiée') + ' au 1er trimestre, ' + (averageOf(2) ?? 'non publiée') + ' au 2e, ' + (averageOf(3) ?? 'non publiée') + ' au 3e'">
+            @for (t of trimesters; track t) {
+              <div class="progress-col" [class.current]="t === selectedTrimester()">
+                <span class="progress-value">{{ averageOf(t) != null ? (averageOf(t) | number:'1.2-2') : '' }}</span>
+                <span class="progress-track">
+                  <span class="progress-fill" [class.empty]="averageOf(t) == null" [style.height.%]="averageOf(t) != null ? pct(averageOf(t)) : 100"></span>
+                </span>
+                <span class="progress-label">T{{ t }}</span>
+              </div>
+            }
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- 5. Remarks -->
+    @if (rc.behavior_remarks || rc.headmaster_remarks || teacherRemarks().length) {
+      <section class="esm-card remarks-card no-print" aria-labelledby="remarks-title">
+        <h3 class="esm-card-title" id="remarks-title">Appréciations</h3>
+        @if (rc.headmaster_remarks) {
+          <blockquote class="remark headmaster"><strong>Mot du directeur</strong>{{ rc.headmaster_remarks }}</blockquote>
+        }
+        @if (rc.behavior_remarks) {
+          <blockquote class="remark"><strong>Comportement et travail</strong>{{ rc.behavior_remarks }}</blockquote>
+        }
+        @for (s of teacherRemarks(); track s.name) {
+          <blockquote class="remark"><strong>{{ s.name }}</strong>{{ s.remark }}</blockquote>
+        }
+      </section>
+    }
+
+    <!-- 6. Official documents -->
+    <section class="documents-section" aria-label="Documents officiels">
+      <div class="docs-tabs-nav no-print" role="tablist">
+        <button type="button" role="tab" class="doc-tab-btn" [class.active]="documentTab() === 'official'"
+                [attr.aria-selected]="documentTab() === 'official'" (click)="documentTab.set('official')">
+          <span class="tab-icon" aria-hidden="true">📜</span>
+          <span class="tab-text"><strong>Bulletin officiel</strong><small>Toutes les matières, à imprimer ou enregistrer en PDF</small></span>
+        </button>
+        @if (hasLanguages()) {
+          <button type="button" role="tab" class="doc-tab-btn" [class.active]="documentTab() === 'languages'"
+                  [attr.aria-selected]="documentTab() === 'languages'" (click)="documentTab.set('languages')">
+            <span class="tab-icon" aria-hidden="true">🇫🇷 🇬🇧</span>
+            <span class="tab-text"><strong>Fiche langues</strong><small>Détail du français et de l’anglais par compétence</small></span>
+          </button>
+        }
+      </div>
+      <div class="document-container">
+        @if (documentTab() === 'official') {
+          <app-bulletin-view [reportCard]="rc" [student]="auth.selectedStudent() || undefined"></app-bulletin-view>
+        } @else {
+          <app-languages-sheet-view [reportCard]="rc" [student]="auth.selectedStudent() || undefined"></app-languages-sheet-view>
+        }
+      </div>
+    </section>
+
+  } @else {
+    <div class="no-card-box esm-card">
+      <div class="empty-icon" aria-hidden="true">⏳</div>
+      <h3>Bulletin du {{ trimesterLabel(selectedTrimester()) }} pas encore publié</h3>
+      <p class="text-slate-500">
+        Les enseignants saisissent les notes, puis l’administration vérifie et publie le bulletin.
+        Il apparaîtra ici dès sa publication.
+      </p>
+      @if (cards().length) {
+        <button type="button" class="btn btn-secondary" (click)="selectTrimester(cards()[cards().length - 1].trimester)">
+          Voir le dernier bulletin publié
+        </button>
+      }
+    </div>
+  }
+</div>

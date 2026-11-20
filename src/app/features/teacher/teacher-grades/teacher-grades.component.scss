@@ -1,0 +1,127 @@
+.grading-page { display: flex; flex-direction: column; gap: 1rem; }
+
+.grading-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.trimester-switch {
+  display: flex;
+  gap: 0.3rem;
+  padding: 0.3rem;
+  background: var(--slate-100);
+  border-radius: var(--radius-md);
+
+  button {
+    padding: 0.45rem 1rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    font: inherit;
+    font-weight: 800;
+    color: var(--slate-600);
+    cursor: pointer;
+
+    &.active { background: #fff; color: var(--gold-800); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06); }
+  }
+}
+
+.selectors {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 12rem;
+  flex: 1 1 12rem;
+
+  span { font-size: 0.8rem; font-weight: 800; color: var(--slate-600); }
+}
+
+.subject-meta { display: flex; gap: 0.4rem; flex-wrap: wrap; padding-bottom: 0.4rem; }
+
+.stats-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--gold-50);
+  border: 1px solid var(--gold-200);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  color: var(--slate-700);
+}
+
+.locked-info { color: var(--slate-500); }
+
+.sheet-card { padding: 0; overflow: hidden; }
+
+.grade-table {
+  &.loading { opacity: 0.5; }
+
+  th small { display: block; font-weight: 600; color: var(--slate-400); text-transform: none; }
+}
+
+.col-student { min-width: 11rem; text-align: start; font-weight: 700; white-space: nowrap; }
+.col-score { text-align: center; min-width: 5.5rem; }
+.col-remark { min-width: 14rem; }
+
+.score-input {
+  width: 4.5rem;
+  padding: 0.4rem 0.45rem;
+  border: 1.5px solid var(--slate-200);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+
+  &:focus { border-color: var(--gold-500); outline: none; box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2); }
+  &[aria-invalid='true'] { border-color: var(--coral-primary); background: var(--coral-light); }
+  &:disabled { background: var(--slate-50); color: var(--slate-500); }
+}
+
+.remark-input { padding: 0.4rem 0.6rem; font-size: 0.88rem; }
+
+.total-cell strong { color: var(--gold-800); font-variant-numeric: tabular-nums; }
+
+tr.row-locked th, tr.row-locked td { background: var(--slate-50); }
+.lock-tag { display: block; font-weight: 700; color: var(--slate-500); }
+
+.save-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.85rem 1.25rem;
+  background: #fff;
+  border-top: 1px solid var(--slate-200);
+}
+
+.save-state { font-size: 0.9rem; font-weight: 700; color: var(--slate-600); }
+.text-coral { color: var(--coral-primary); }
+
+.empty-box { padding: 2rem; text-align: center; }
+.empty-cell { text-align: center; padding: 2rem; color: var(--slate-400); }
+
+/* Student names stay visible while scrolling through many components. */
+.grade-table .col-student {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  background: #fff;
+  box-shadow: 1px 0 0 var(--slate-200);
+}
+.grade-table thead .col-student { background: var(--slate-50); z-index: 2; }
+tr.row-locked .col-student { background: var(--slate-50); }

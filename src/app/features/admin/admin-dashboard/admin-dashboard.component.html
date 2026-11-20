@@ -1,0 +1,136 @@
+<div class="admin-dashboard-page">
+  <div class="admin-header esm-card">
+    <div class="school-lead">
+      <img src="assets/logo-excellence-school-monastir.jpg" alt="Excellence School" class="admin-logo" onerror="this.src='logo.jpg'" />
+      <div>
+        <h2 class="esm-card-title">Direction & Administration Générale</h2>
+        <p class="text-slate-500">Excellence School Monastir • Année Scolaire 2026-2027</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card esm-card">
+      <span class="icon">👥</span>
+      <div class="info">
+        <small>Total Élèves</small>
+        <strong>146 élèves</strong>
+      </div>
+    </div>
+
+    <div class="kpi-card esm-card">
+      <span class="icon">🏫</span>
+      <div class="info">
+        <small>Classes Ouvertes</small>
+        <strong>{{ schoolData.classes().length }} classes</strong>
+      </div>
+    </div>
+
+    <div class="kpi-card esm-card highlight" *ngIf="pendingRequestsCount() > 0">
+      <span class="icon">👨‍👩‍👧</span>
+      <div class="info">
+        <small>Inscriptions en attente</small>
+        <strong class="text-coral">{{ pendingRequestsCount() }} demandes</strong>
+      </div>
+      <a routerLink="/admin/link-requests" class="btn btn-sm btn-outline-gold">Examiner →</a>
+    </div>
+
+    <div class="kpi-card esm-card">
+      <span class="icon">💳</span>
+      <div class="info">
+        <small>Taux d'encaissement</small>
+        <strong class="text-mint">88 %</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- Administrative Quick Grid -->
+  <div class="admin-cards-grid">
+    <div class="esm-card">
+      <div class="esm-card-header">
+        <h3 class="esm-card-title">📅 Agenda de la semaine</h3>
+        <a routerLink="/admin/calendar" class="badge badge-gold">Ouvrir</a>
+      </div>
+
+      <div class="agenda-mini-list" *ngIf="calendar.upcoming().length; else noAgenda">
+        <div *ngFor="let evt of calendar.upcoming().slice(0, 4)" class="agenda-item">
+          <div class="agenda-date">
+            <strong>{{ evt.starts_at | date:'dd' }}</strong>
+            <span>{{ evt.starts_at | date:'MMM' }}</span>
+          </div>
+          <div class="agenda-detail">
+            <strong>{{ evt.title }}</strong>
+            <small>{{ evt.category }} • {{ evt.all_day ? 'Toute la journée' : (evt.starts_at | date:'HH:mm') }}</small>
+          </div>
+        </div>
+      </div>
+
+      <ng-template #noAgenda>
+        <p class="text-slate-500 text-sm mb-0">Aucun événement programmé.</p>
+      </ng-template>
+    </div>
+
+    <!-- Link Requests Card -->
+    <div class="esm-card">
+      <div class="esm-card-header">
+        <h3 class="esm-card-title">👨‍👩‍👧 Demandes d'inscription Parents</h3>
+        <a routerLink="/admin/link-requests" class="badge badge-gold">Voir tout</a>
+      </div>
+      <p class="text-slate-500 text-sm mb-4">
+        Validez les déclarations des parents pour autoriser l'accès aux bulletins et devoirs de leurs enfants.
+      </p>
+      <div class="quick-requests-list">
+        <p *ngIf="linkRequests.loaded() && linkRequests.requests().length === 0" class="text-slate-400 text-sm">Aucune demande pour le moment.</p>
+        <p *ngIf="linkRequests.error()" class="text-sm" role="alert">{{ linkRequests.error() }}</p>
+        <div *ngFor="let req of linkRequests.requests().slice(0, 3)" class="req-mini-item">
+          <div>
+            <strong>{{ req.parent_name }}</strong>
+            <small class="text-slate-500" style="display: block;">Déclare : {{ req.child_first_name }} {{ req.child_last_name }} <span *ngIf="req.declared_class_name">({{ req.declared_class_name }})</span></small>
+          </div>
+          <span class="badge" [ngClass]="req.status === 'pending' ? 'badge-yellow' : req.status === 'approved' ? 'badge-mint' : 'badge-coral'">
+            {{ req.status === 'pending' ? 'En attente' : req.status === 'approved' ? 'Approuvée' : 'Refusée' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulletins Validation Card -->
+    <div class="esm-card">
+      <div class="esm-card-header">
+        <h3 class="esm-card-title">📑 Bulletins du 1er Trimestre</h3>
+        <a routerLink="/admin/bulletins" class="badge badge-gold">Gérer</a>
+      </div>
+      <p class="text-slate-500 text-sm mb-4">
+        Supervisez les moyennes, saisissez les appréciations de la direction et publiez les bulletins officiels.
+      </p>
+      <div class="bulletin-stat-box">
+        <div class="stat-row">
+          <span>Classe 3ème A :</span>
+          <span class="badge badge-mint">Prêt & Publié ✓</span>
+        </div>
+        <div class="stat-row">
+          <span>Classe 1ère A :</span>
+          <span class="badge badge-yellow">Validation en cours</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- News & Announcements -->
+    <div class="esm-card">
+      <div class="esm-card-header">
+        <h3 class="esm-card-title">📢 Actualités de l'école</h3>
+        <a routerLink="/admin/news" class="btn btn-sm btn-primary-gold">+ Publier</a>
+      </div>
+      <p class="text-slate-500 text-sm mb-4">
+        Communiquez les événements scolaires, sorties pédagogiques et fêtes aux familles.
+      </p>
+      <div class="news-mini-list">
+        <div *ngFor="let n of schoolData.news().slice(0, 2)" class="news-mini-row">
+          <span>{{ n.title_fr }}</span>
+          <span class="badge badge-sky">{{ n.category }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

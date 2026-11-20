@@ -1,0 +1,180 @@
+<div class="bulletin-wrapper">
+  <!-- Action Bar -->
+  <div class="bulletin-toolbar no-print">
+    <div class="status-indicator">
+      <span class="badge" [ngClass]="reportCard?.status === 'published' ? 'badge-mint' : 'badge-yellow'">
+        {{ reportCard?.status === 'published' ? 'Officiel & publié' : 'Brouillon — non visible par les parents' }}
+      </span>
+      <span class="badge badge-gold" *ngIf="reportCard?.mention">🏆 {{ reportCard.mention }}</span>
+    </div>
+    <button (click)="printBulletin()" class="btn btn-primary-gold">
+      🖨️ {{ i18n.t('downloadPdf') }}
+    </button>
+  </div>
+
+  <!-- A4 Printable Document Container -->
+  <div #sheet class="print-page bulletin-sheet" [class.is-draft]="reportCard?.status !== 'published'">
+    <!-- Header: Official Tunisian Primary School Banner with Logo -->
+    <header class="bulletin-header">
+      <div class="header-side header-left">
+        <strong>RÉPUBLIQUE TUNISIENNE</strong>
+        <span>MINISTÈRE DE L'ÉDUCATION</span>
+        <span>COMMISSARIAT RÉGIONAL DE MONASTIR</span>
+        <span class="school-type">ÉCOLE PRIMAIRE PRIVÉE</span>
+      </div>
+
+      <div class="header-center">
+        <img src="assets/logo-excellence-school-monastir.jpg" alt="Excellence School" class="bulletin-logo" onerror="this.src='logo.jpg'" />
+        <h1 class="school-name">EXCELLENCE SCHOOL</h1>
+        <div class="school-motto">MONASTIR</div>
+      </div>
+
+      <div class="header-side header-right" dir="rtl">
+        <strong>الجمهورية التونسية</strong>
+        <span>وزارة التربية</span>
+        <span>المندوبية الجهوية للتربية بالمنستير</span>
+        <span class="school-type">المدرسة الابتدائية الخاصة</span>
+      </div>
+    </header>
+
+    <!-- Document Title -->
+    <div class="bulletin-title-banner">
+      <h2>BULLETIN DE NOTES DU {{ reportCard?.trimester === 1 ? '1ER' : reportCard?.trimester === 2 ? '2ÈME' : '3ÈME' }} TRIMESTRE</h2>
+      <div class="arabic-title" dir="rtl">بطاقة الأعداد المدرسية للثلاثي {{ reportCard?.trimester === 1 ? 'الأول' : reportCard?.trimester === 2 ? 'الثاني' : 'الثالث' }}</div>
+    </div>
+
+    <!-- Student and Class Identity Box -->
+    <div class="student-identity-card">
+      <div class="identity-grid">
+        <div class="identity-item">
+          <span class="label">Élève / التلميذ :</span>
+          <span class="value font-bold">
+            {{ reportCard?.content?.student_first_name || student?.first_name }} {{ reportCard?.content?.student_last_name || student?.last_name }}
+            <span *ngIf="reportCard?.content?.student_first_name_ar || student?.first_name_ar" class="ar-name">(<bdi lang="ar" dir="rtl">{{ reportCard?.content?.student_first_name_ar || student?.first_name_ar }} {{ reportCard?.content?.student_last_name_ar || student?.last_name_ar }}</bdi>)</span>
+          </span>
+        </div>
+        <div class="identity-item">
+          <span class="label">Classe / القسم :</span>
+          <span class="value font-bold">{{ reportCard?.content?.class_name || student?.class_name || '—' }}</span>
+        </div>
+        <div class="identity-item">
+          <span class="label">Année Scolaire / السنة الدراسية :</span>
+          <span class="value">{{ reportCard?.content?.school_year || '2026-2027' }}</span>
+        </div>
+        <div class="identity-item">
+          <span class="label">Effectif / عدد تلاميذ القسم :</span>
+          <span class="value">{{ (reportCard?.content?.class_size || reportCard?.class_size) ? (reportCard?.content?.class_size || reportCard?.class_size) + ' élèves' : '—' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Marks & Domains Table -->
+    <table class="bulletin-table">
+      <thead>
+        <tr>
+          <th style="width: 32%;">Domaines & Matières / المجالات والمواد</th>
+          <th style="width: 10%; text-align: center;">Coeff. / الضارب</th>
+          <th style="width: 14%; text-align: center;">Note / العدد</th>
+          <th style="width: 12%; text-align: center;">Max. / الأعلى</th>
+          <th style="width: 12%; text-align: center;">Min. / الأدنى</th>
+          <th style="width: 20%;">Observations / الملاحظات</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let dom of reportCard?.content?.domains">
+          <!-- Domain Header Row -->
+          <tr class="domain-header-row">
+            <td colspan="5" class="domain-title">
+              <strong>{{ dom.name_fr }}</strong>
+              <span class="arabic-domain" dir="rtl">({{ dom.name_ar }})</span>
+            </td>
+            <td class="domain-avg">
+              Moyenne : <strong>{{ dom.domain_average !== null ? (dom.domain_average | number:'1.2-2') : '—' }} / 20</strong>
+            </td>
+          </tr>
+
+          <!-- Subject Rows -->
+          <tr *ngFor="let sbj of dom.subjects" class="subject-row">
+            <td class="subject-name">
+              <span>{{ sbj.name_fr }}</span>
+              <small class="text-slate-500" dir="rtl"> ({{ sbj.name_ar }})</small>
+            </td>
+            <td style="text-align: center;">{{ sbj.coefficient }}</td>
+            <td style="text-align: center;" class="score-cell">
+              <strong>{{ sbj.score_20 !== null ? (sbj.score_20 | number:'1.2-2') : '—' }}</strong>
+            </td>
+            <td style="text-align: center;" class="text-slate-600">{{ sbj.class_max !== null ? (sbj.class_max | number:'1.2-2') : '—' }}</td>
+            <td style="text-align: center;" class="text-slate-600">{{ sbj.class_min !== null ? (sbj.class_min | number:'1.2-2') : '—' }}</td>
+            <td class="recommendation-cell">
+              <small>{{ sbj.remark || dom.recommendations || '' }}</small>
+            </td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+
+    <!-- Trimester Summary & Averages -->
+    <div class="summary-section">
+      <div class="averages-box">
+        <div class="avg-card main-avg">
+          <span class="avg-label">{{ i18n.t('generalAverage') }}</span>
+          <span class="avg-value">{{ reportCard?.general_average != null ? (reportCard?.general_average | number:'1.2-2') : '—' }} <small>/ 20</small></span>
+          <span class="avg-rank" *ngIf="reportCard?.rank">Rang : {{ reportCard?.rank }}{{ reportCard?.rank === 1 ? 'er' : 'e' }} sur {{ reportCard?.class_size }}</span>
+        </div>
+        <div class="avg-card" *ngIf="reportCard?.class_average != null">
+          <span class="avg-label">Moyenne de la classe</span>
+          <span class="avg-sub-val">{{ reportCard?.class_average | number:'1.2-2' }} / 20</span>
+        </div>
+        <div class="avg-card">
+          <span class="avg-label">{{ i18n.t('classHighest') }}</span>
+          <span class="avg-sub-val">{{ reportCard?.class_max_average | number:'1.2-2' }} / 20</span>
+        </div>
+        <div class="avg-card">
+          <span class="avg-label">{{ i18n.t('classLowest') }}</span>
+          <span class="avg-sub-val">{{ reportCard?.class_min_average | number:'1.2-2' }} / 20</span>
+        </div>
+      </div>
+
+      <!-- Conduct, Remarks and Distinction -->
+      <div class="remarks-box">
+        <div class="remark-row" *ngIf="reportCard?.behavior_remarks">
+          <strong>{{ i18n.t('behaviorRemarks') }} :</strong>
+          <span>{{ reportCard?.behavior_remarks }}</span>
+        </div>
+        <div class="remark-row" *ngIf="reportCard?.headmaster_remarks || reportCard?.content?.headmaster_remarks">
+          <strong>Mot du directeur / كلمة المدير :</strong>
+          <span>{{ reportCard?.headmaster_remarks || reportCard?.content?.headmaster_remarks }}</span>
+        </div>
+        <div class="remark-row" *ngIf="reportCard?.mention">
+          <strong>Distinction & Mention / لوحة الشرف :</strong>
+          <span class="mention-pill">🏅 {{ reportCard.mention }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Signatures and Stamp Footer -->
+    <footer class="bulletin-footer">
+      <div class="signature-box">
+        <span class="sig-title">Date & Signature du Parent</span>
+        <span class="sig-arabic" dir="rtl">تاريخ وإمضاء الولي</span>
+        <div class="sig-line"></div>
+      </div>
+
+      <div class="signature-box center-stamp">
+        <div class="official-stamp-circle">
+          <span class="stamp-top">EXCELLENCE SCHOOL</span>
+          <span class="stamp-mid">★ MONASTIR ★</span>
+          <span class="stamp-bot">DIRECTION</span>
+        </div>
+      </div>
+
+      <div class="signature-box">
+        <span class="sig-title">Le Directeur de l'École</span>
+        <span class="sig-arabic" dir="rtl">مدير المدرسة</span>
+        <div class="sig-img-placeholder">
+          <span class="signed-text" *ngIf="reportCard?.status === 'published'">Signé & cacheté</span>
+        </div>
+      </div>
+    </footer>
+  </div>
+</div>

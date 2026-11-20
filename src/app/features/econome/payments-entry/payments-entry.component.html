@@ -1,0 +1,135 @@
+<div class="payments-entry-page">
+  <!-- Top Bar -->
+  <div class="entry-top-bar esm-card">
+    <div>
+      <h2 class="esm-card-title">💰 {{ i18n.t('recordPayment') }}</h2>
+      <p class="text-slate-500">
+        Seul habilité : Enregistrement des règlements au comptoir de la caisse et génération instantanée du reçu officiel en dinars tunisiens (TND).
+      </p>
+    </div>
+
+    <div class="badge badge-mint font-bold">
+      Caisse Ouverte • Excellence School Monastir
+    </div>
+  </div>
+
+  <div class="entry-layout-grid">
+    <!-- Left: Student Selector -->
+    <div class="student-select-card esm-card">
+      <div class="esm-card-header">
+        <h3 class="esm-card-title">1. Sélection de l'Élève</h3>
+      </div>
+
+      <div class="form-group">
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
+          class="form-input"
+          placeholder="Rechercher par nom ou prénom..."
+        />
+      </div>
+
+      <div class="students-scroll-list">
+        <div
+          *ngFor="let st of searchResults()"
+          class="student-pick-item"
+          [class.selected]="selectedStudent?.id === st.id"
+          (click)="selectStudent(st)"
+        >
+          <span class="st-avatar">{{ st.gender === 'F' ? '👧' : '👦' }}</span>
+          <div class="st-details">
+            <strong>{{ st.first_name }} {{ st.last_name }}</strong>
+            <small class="text-slate-500">{{ st.class_name || '3ème A' }}</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Fee and Payment Form -->
+    <div class="payment-form-card esm-card">
+      <div class="esm-card-header">
+        <h3 class="esm-card-title">2. Détails du Règlement ({{ selectedStudent?.first_name }} {{ selectedStudent?.last_name }})</h3>
+      </div>
+
+      <div *ngIf="studentPendingFees().length === 0" class="no-pending-box">
+        <p>✅ Aucun paiement en attente pour cet élève. Tout est à jour !</p>
+      </div>
+
+      <form *ngIf="studentPendingFees().length > 0" (ngSubmit)="submitPayment()">
+        <!-- Pick which fee is being paid -->
+        <div class="form-group">
+          <label class="form-label">Échéance à régler *</label>
+          <div class="pending-fees-list">
+            <div
+              *ngFor="let fee of studentPendingFees()"
+              class="fee-option-box"
+              [class.active]="selectedFee?.id === fee.id"
+              (click)="selectFee(fee)"
+            >
+              <div>
+                <strong>{{ fee.label }}</strong>
+                <small class="text-slate-500" style="display: block;">Date limite : {{ fee.due_date | date:'dd/MM/yyyy' }}</small>
+              </div>
+              <div class="fee-amount badge badge-gold font-bold">
+                {{ fee.amount | number:'1.3-3' }} DT
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Type de paiement *</label>
+          <div class="payment-type-scroll-list">
+            <button
+              *ngFor="let option of paymentTypeOptions"
+              type="button"
+              class="payment-type-option"
+              [class.selected]="selectedPaymentType === option.value"
+              (click)="selectPaymentType(option.value)"
+            >
+              {{ option.label }}
+            </button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Montant perçu (TND / DT) *</label>
+            <input type="number" [(ngModel)]="payAmount" name="payAmount" class="form-input font-bold text-lg" step="0.100" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Mode de règlement *</label>
+            <select [(ngModel)]="payMethod" name="payMethod" class="form-select font-bold">
+              <option value="cash">💵 Espèces (Caisse)</option>
+              <option value="cheque">📄 Chèque bancaire</option>
+              <option value="transfer">🏦 Virement bancaire</option>
+              <option value="other">Autre</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Référence du reçu ou n° chèque / virement</label>
+          <input type="text" [(ngModel)]="payRef" name="payRef" class="form-input" placeholder="Ex: CHQ-BIAT-123456 ou REC-2026-..." />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Note interne (optionnel)</label>
+          <input type="text" [(ngModel)]="payNote" name="payNote" class="form-input" placeholder="Remarque sur le versement..." />
+        </div>
+
+        <button type="submit" class="btn btn-primary-gold btn-block" style="margin-top: 1.5rem; padding: 0.85rem;">
+          💾 Valider le Règlement & Générer le Reçu Officiel
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Instant Official Receipt Modal -->
+<app-receipt-modal
+  *ngIf="receiptFee"
+  [fee]="receiptFee"
+  (close)="closeReceipt()"
+></app-receipt-modal>

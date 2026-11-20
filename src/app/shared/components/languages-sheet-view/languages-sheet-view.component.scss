@@ -1,0 +1,233 @@
+.sheet-wrapper {
+  margin-bottom: 2rem;
+}
+
+.sheet-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  background: #FFFFFF;
+  padding: 0.85rem 1.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--slate-200);
+}
+
+.language-sheet {
+  background: #FFFFFF;
+  border: 2px solid var(--gold-500);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 2rem;
+  max-width: 960px;
+  margin: 0 auto;
+  color: #1E293B;
+}
+
+.sheet-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  border-bottom: 2px solid var(--gold-400);
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.25rem;
+
+  .sheet-logo {
+    height: 72px;
+    width: auto;
+    object-fit: contain;
+  }
+
+  .sheet-title-group {
+    flex: 1;
+
+    .school-name {
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: var(--slate-900);
+      margin: 0;
+    }
+
+    .doc-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--gold-700);
+      margin-top: 0.25rem;
+    }
+
+    .arabic-doc-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--slate-700);
+    }
+
+    .period-info {
+      font-size: 0.85rem;
+      color: var(--slate-500);
+      font-weight: 700;
+      margin-top: 0.25rem;
+    }
+  }
+}
+
+.student-strip {
+  display: flex;
+  justify-content: space-between;
+  background-color: var(--slate-50);
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--slate-200);
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+
+  .label {
+    color: var(--slate-500);
+    margin-right: 0.35rem;
+  }
+}
+
+.languages-tables-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.language-card {
+  border: 1.5px solid var(--slate-200);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+
+  .language-card-header {
+    display: flex;
+    justify-content: space-between;
+    background-color: var(--gold-100);
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1.5px solid var(--gold-300);
+
+    .lang-title {
+      font-size: 1.1rem;
+      color: var(--gold-900);
+
+      .lang-ar {
+        margin-left: 0.5rem;
+        font-size: 0.95rem;
+      }
+    }
+
+    .lang-coeff {
+      font-size: 0.9rem;
+      color: var(--gold-800);
+    }
+  }
+}
+
+.components-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th, td {
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--slate-200);
+    font-size: 0.9rem;
+  }
+
+  th {
+    background-color: var(--slate-50);
+    font-weight: 800;
+    color: var(--slate-700);
+  }
+
+  .cmp-name {
+    font-weight: 700;
+    color: var(--slate-800);
+  }
+
+  .cmp-score {
+    font-weight: 800;
+    color: var(--slate-900);
+  }
+
+  .total-row {
+    background-color: var(--slate-50);
+    border-top: 2px solid var(--slate-300);
+  }
+
+  .final-score-row {
+    background: linear-gradient(135deg, var(--gold-50) 0%, var(--gold-100) 100%);
+    border-top: 2px solid var(--gold-400);
+
+    td {
+      font-size: 1rem;
+      color: var(--gold-900);
+    }
+
+    .final-score-box {
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: var(--gold-700);
+    }
+  }
+}
+
+.teacher-obs-box {
+  background-color: #FFFFFF;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--slate-200);
+
+  .obs-title {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--slate-600);
+    margin-bottom: 0.25rem;
+  }
+
+  .obs-content {
+    font-size: 0.95rem;
+    font-style: italic;
+    color: var(--slate-800);
+  }
+}
+
+.sheet-footer {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px dashed var(--slate-300);
+
+  .sig-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--slate-700);
+
+    .sig-space {
+      height: 40px;
+      width: 70%;
+      border-bottom: 1px solid var(--slate-300);
+      margin-top: 10px;
+
+      &.signed {
+        border-bottom: none;
+        font-family: 'Brush Script MT', cursive, sans-serif;
+        font-size: 1.25rem;
+        color: #1E3A8A;
+      }
+    }
+  }
+
+  .stamp-pill {
+    padding: 0.5rem 1rem;
+    border: 2px solid #2563EB;
+    color: #2563EB;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 900;
+    transform: rotate(-3deg);
+  }
+}

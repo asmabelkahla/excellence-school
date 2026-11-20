@@ -1,0 +1,304 @@
+<div class="parent-dashboard-page">
+  <!-- Child Welcome Banner -->
+  @if (auth.selectedStudent(); as child) {
+    <div class="welcome-banner">
+      <div class="welcome-left">
+        <div class="child-avatar-big" aria-hidden="true">{{ child.gender === 'M' ? '👦' : '👧' }}</div>
+        <div>
+          <h2 class="welcome-title">
+            Bonjour, espace de {{ child.first_name }} {{ child.last_name }}
+            @if (child.first_name_ar) {
+              <span class="arabic-child-name" dir="rtl">({{ child.first_name_ar }} {{ child.last_name_ar }})</span>
+            }
+          </h2>
+          <div class="welcome-sub">
+            @if (child.class_name) { <span class="badge badge-gold">{{ child.class_name }}</span> }
+            <span>Année scolaire 2026-2027</span>
+            <span>• {{ i18n.t('appName') }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="quick-stat-chips">
+        <a routerLink="/parent/grades" class="stat-chip">
+          <span class="stat-icon" aria-hidden="true">📊</span>
+          <div class="stat-text">
+            <small>Notes</small>
+            <strong>Bulletins</strong>
+          </div>
+        </a>
+        <a routerLink="/parent/fees" class="stat-chip">
+          <span class="stat-icon" aria-hidden="true">💳</span>
+          <div class="stat-text">
+            <small>Scolarité</small>
+            <strong>Frais &amp; reçus</strong>
+          </div>
+        </a>
+        <a routerLink="/parent/homework" class="stat-chip">
+          <span class="stat-icon" aria-hidden="true">✏️</span>
+          <div class="stat-text">
+            <small>Devoirs</small>
+            <strong>{{ homeworkToDo() }} à faire</strong>
+          </div>
+        </a>
+      </div>
+    </div>
+  }
+
+  @if (declareSuccess()) {
+    <div class="alert alert-success" role="status">✓ {{ declareSuccess() }}</div>
+  }
+
+  <section class="children-management-card esm-card" aria-labelledby="children-title">
+    <div class="esm-card-header children-header">
+      <h3 class="esm-card-title" id="children-title">👨‍👩‍👧 Mes enfants</h3>
+      <div class="children-header-actions">
+        <button type="button" class="btn btn-secondary btn-sm" (click)="refresh()" [disabled]="refreshing()">
+          @if (refreshing()) { <span class="btn-spinner" aria-hidden="true"></span> }
+          Actualiser
+        </button>
+        <button type="button" class="btn btn-primary-gold btn-sm" (click)="openDeclareForm()">+ Déclarer un enfant</button>
+      </div>
+    </div>
+
+    @if (auth.childrenError()) {
+      <div class="alert alert-error" role="alert">{{ auth.childrenError() }}</div>
+    }
+
+    @if (auth.parentChildren().length > 0) {
+      <div class="children-list-grid">
+        @for (child of auth.parentChildren(); track child.id) {
+          <button type="button" class="child-card" [class.selected]="auth.selectedStudent()?.id === child.id"
+                  (click)="auth.selectStudent(child)" [attr.aria-pressed]="auth.selectedStudent()?.id === child.id">
+            <span class="child-avatar" aria-hidden="true">{{ childAvatar(child) }}</span>
+            <span class="child-card-body">
+              <strong>{{ child.first_name }} {{ child.last_name }}</strong>
+              <span class="child-meta">
+                @if (child.class_name) { <span class="badge badge-gold">{{ child.class_name }}</span> }
+                @if (child.relationship) { <small>{{ relationshipLabel(child.relationship) }}</small> }
+              </span>
+              @if (child.birth_date) { <small>Né(e) le {{ child.birth_date | date:'dd/MM/yyyy' }}</small> }
+            </span>
+            @if (auth.selectedStudent()?.id === child.id) { <span class="selected-tag">Affiché</span> }
+          </button>
+        }
+      </div>
+    } @else if (auth.childrenLoading()) {
+      <p class="empty-state">Chargement…</p>
+    } @else {
+      <div class="empty-state">
+        <p><strong>Aucun enfant n’est encore rattaché à votre compte.</strong></p>
+        <p>L’administration rattache chaque enfant après vérification. Si vous n’avez fait aucune demande, cliquez sur « Déclarer un enfant ».</p>
+      </div>
+    }
+
+    @if (space.pending().length > 0 || space.rejected().length > 0) {
+      <div class="requests-block">
+        <h4>Mes demandes</h4>
+        <ul class="request-list">
+          @for (req of space.pending(); track req.id) {
+            <li>
+              <span>{{ req.child_first_name }} {{ req.child_last_name }}
+                @if (req.declared_class_name) { <small>· {{ req.declared_class_name }}</small> }</span>
+              <span class="badge badge-yellow">En cours de vérification</span>
+            </li>
+          }
+          @for (req of space.rejected(); track req.id) {
+            <li>
+              <span>{{ req.child_first_name }} {{ req.child_last_name }}</span>
+              <span class="badge badge-coral">Non validée — contactez l’école</span>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  </section>
+
+  <div class="dashboard-grid">
+    <!-- Main Left: School News Feed (As requested in CDC 3.7) -->
+    <div class="feed-column">
+      <div class="section-title-row">
+        <h3 class="section-title">📢 {{ i18n.t('schoolNews') }}</h3>
+        <span class="badge badge-sky">Excellence School Monastir</span>
+      </div>
+
+      <div class="news-list">
+        <article *ngFor="let item of schoolData.news()" class="news-card esm-card" [class.pinned]="item.pinned">
+          <div class="pinned-tag" *ngIf="item.pinned">
+            ⭐ {{ i18n.t('pinnedNews') }}
+          </div>
+
+          <div class="news-cover-wrapper" *ngIf="item.cover_path" (click)="zoomPhoto(item.cover_path)">
+            <img [src]="item.cover_path" alt="Photo actualité" class="news-cover-img" onerror="this.src='logo.jpg'" />
+            <div class="zoom-overlay">🔍 Cliquez pour agrandir</div>
+          </div>
+
+          <div class="news-body">
+            <div class="news-meta">
+              <span class="badge" [ngClass]="item.category === 'trip' ? 'badge-sky' : item.category === 'celebration' ? 'badge-yellow' : 'badge-coral'">
+                {{ item.category === 'trip' ? 'Sortie scolaire' : item.category === 'celebration' ? 'Fête & Culture' : 'Rappel important' }}
+              </span>
+              <span class="news-date">{{ item.publish_at | date:'dd MMMM yyyy' }}</span>
+            </div>
+
+            <h4 class="news-title">
+              {{ i18n.isRtl() && item.title_ar ? item.title_ar : item.title_fr }}
+            </h4>
+
+            <p class="news-text">
+              {{ i18n.isRtl() && item.body_ar ? item.body_ar : item.body_fr }}
+            </p>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <!-- Right Column: Quick widgets (Today's Homework & Next Event) -->
+    <div class="widgets-column">
+      <!-- Quick Actions Grid -->
+      <div class="quick-nav-card esm-card">
+        <div class="esm-card-header">
+          <h4 class="esm-card-title">🚀 Accès Rapide</h4>
+        </div>
+        <div class="quick-links-grid">
+          <a routerLink="/parent/grades" class="quick-link-btn">
+            <span class="q-icon">📑</span>
+            <span>Bulletin Officiel</span>
+          </a>
+          <a routerLink="/parent/fees" class="quick-link-btn">
+            <span class="q-icon">🧾</span>
+            <span>Reçus & Paiements</span>
+          </a>
+          <a routerLink="/parent/attendance" class="quick-link-btn">
+            <span class="q-icon">📅</span>
+            <span>Justifier Absence</span>
+          </a>
+          <a routerLink="/parent/appointments" class="quick-link-btn">
+            <span class="q-icon">🤝</span>
+            <span>Prendre RDV</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Homework Widget -->
+      <div class="esm-card homework-widget">
+        <div class="esm-card-header">
+          <h4 class="esm-card-title">📚 Prochains devoirs</h4>
+          <a routerLink="/parent/homework" class="view-all-link">Voir tout →</a>
+        </div>
+        <div class="widget-homework-list">
+          <p *ngIf="!getTodayHomework().length" class="text-slate-500 text-sm">Aucun devoir à faire 🎉</p>
+          <div *ngFor="let hw of getTodayHomework()" class="hw-mini-item" [class.done]="hw.done">
+            <button type="button" class="hw-checkbox" (click)="onToggleHomework(hw.id, hw.done)" role="checkbox" [attr.aria-checked]="hw.done"
+                    [attr.aria-label]="(hw.done ? 'Marquer comme non fait : ' : 'Marquer comme fait : ') + hw.title">
+              {{ hw.done ? '✓' : '' }}
+            </button>
+            <div class="hw-mini-info">
+              <span class="hw-subject-badge badge badge-gold">{{ hw.subject_name }}</span>
+              <div class="hw-title">{{ hw.title }}</div>
+              <small class="hw-due">Pour le {{ hw.due_date | date:'dd/MM' }}</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upcoming Event Widget -->
+      <div class="esm-card event-widget" *ngIf="getNextEvent() as evt">
+        <div class="esm-card-header">
+          <h4 class="esm-card-title">🗓️ Prochain Événement</h4>
+        </div>
+        <div class="event-mini-content">
+          <div class="event-date-badge">
+            <span class="m">{{ evt.starts_at | date:'MMM' }}</span>
+            <span class="d">{{ evt.starts_at | date:'dd' }}</span>
+          </div>
+          <div>
+            <strong>{{ evt.title }}</strong>
+            <p>{{ evt.description }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="esm-card event-widget">
+        <div class="esm-card-header">
+          <h4 class="esm-card-title">📅 Agenda de la semaine</h4>
+        </div>
+        <div class="widget-agenda-list">
+          <div *ngFor="let evt of calendar.upcoming().slice(0, 4)" class="agenda-mini-row">
+            <div class="agenda-day-box">
+              <span>{{ evt.starts_at | date:'dd' }}</span>
+            </div>
+            <div class="agenda-text">
+              <strong>{{ evt.title }}</strong>
+              <small>{{ evt.category }}</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Declare a child: creates a request validated by the administration -->
+@if (showDeclareForm()) {
+  <div class="esm-modal-backdrop" (click)="closeDeclareForm()">
+    <div class="esm-modal-container declare-modal" role="dialog" aria-modal="true" aria-labelledby="declare-title"
+         (click)="$event.stopPropagation()">
+      <div class="esm-card-header">
+        <h3 class="esm-card-title" id="declare-title">Déclarer un enfant</h3>
+        <button type="button" class="close-btn" (click)="closeDeclareForm()" aria-label="Fermer">✕</button>
+      </div>
+      <p class="form-hint">
+        L’enfant doit être inscrit à l’école. L’administration vérifiera votre lien avec lui avant de vous donner accès à son suivi.
+      </p>
+
+      <form (ngSubmit)="submitDeclaration()" novalidate class="declare-form">
+        <div class="form-group">
+          <label class="form-label" for="decl-first">Prénom de l’enfant *</label>
+          <input id="decl-first" class="form-input" name="firstName" maxlength="80" [(ngModel)]="declaration.firstName" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="decl-last">Nom de l’enfant *</label>
+          <input id="decl-last" class="form-input" name="lastName" maxlength="80" [(ngModel)]="declaration.lastName" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="decl-class">Classe</label>
+          <select id="decl-class" class="form-select" name="classId" [(ngModel)]="declaration.classId">
+            <option value="">Je ne sais pas</option>
+            @for (cls of space.classes(); track cls.id) {
+              <option [value]="cls.id">{{ cls.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="decl-rel">Vous êtes</label>
+          <select id="decl-rel" class="form-select" name="relationship" [(ngModel)]="declaration.relationship">
+            @for (rel of relationships; track rel) {
+              <option [value]="rel">{{ relationshipLabels[rel] }}</option>
+            }
+          </select>
+        </div>
+
+        @if (declareError()) {
+          <div class="alert alert-error full-row" role="alert">{{ declareError() }}</div>
+        }
+
+        <div class="modal-actions full-row">
+          <button type="button" class="btn btn-secondary" (click)="closeDeclareForm()" [disabled]="declaring()">Annuler</button>
+          <button type="submit" class="btn btn-primary-gold" [disabled]="declaring()">
+            @if (declaring()) { <span class="btn-spinner" aria-hidden="true"></span> }
+            Envoyer la demande
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- Photo Zoom Modal -->
+<div class="esm-modal-backdrop" *ngIf="selectedPhoto" (click)="closePhoto()">
+  <div class="photo-zoom-container" (click)="$event.stopPropagation()">
+    <button class="close-zoom-btn" (click)="closePhoto()">✕</button>
+    <img [src]="selectedPhoto" alt="Zoom Photo" class="zoomed-img" onerror="this.src='logo.jpg'" />
+  </div>
+</div>

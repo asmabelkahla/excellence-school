@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: excellence-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: excellence_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5434:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      # Demo accounts and data (local only, public passwords)
+      - ./database/seed-demo.sql:/docker-entrypoint-initdb.d/02-seed-demo.sql:ro
+
+volumes:
+  postgres_data:

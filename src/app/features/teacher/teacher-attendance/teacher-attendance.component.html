@@ -1,0 +1,82 @@
+<div class="teacher-attendance-page">
+  <div class="attendance-top-bar esm-card">
+    <div>
+      <h2 class="esm-card-title">📋 {{ i18n.t('navRollCall') }}</h2>
+      <p class="text-slate-500">Appel quotidien des élèves et notification immédiate des absences aux parents.</p>
+    </div>
+
+    <!-- Class and Date Selectors -->
+    <div class="controls-row">
+      <div class="control-item">
+        <label class="form-label">Classe :</label>
+        <select [(ngModel)]="selectedClassId" (change)="initRollCall()" class="form-select">
+          <option *ngFor="let c of getAssignedClasses()" [value]="c.id">{{ c.name }}</option>
+        </select>
+      </div>
+
+      <div class="control-item">
+        <label class="form-label">Date de l'appel :</label>
+        <input type="date" [(ngModel)]="selectedDate" (change)="initRollCall()" class="form-input" />
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="savedMessage" class="save-toast">
+    ✓ Appel enregistré avec succès pour la classe ! Les parents des élèves absents sont notifiés.
+  </div>
+
+  <!-- Roll Call Table -->
+  <div class="esm-card roll-call-card">
+    <div class="esm-card-header">
+      <h3 class="esm-card-title">Élèves de la classe ({{ studentsRoll.length }})</h3>
+      <button (click)="markAllPresent()" class="btn btn-sm btn-secondary">
+        ✓ Marquer tous présents
+      </button>
+    </div>
+
+    <div class="students-roll-list">
+      <div *ngFor="let item of studentsRoll" class="roll-row">
+        <div class="student-info">
+          <span class="gender-icon">{{ item.student.gender === 'F' ? '👧' : '👦' }}</span>
+          <div>
+            <strong class="student-name">{{ item.student.first_name }} {{ item.student.last_name }}</strong>
+            <small class="arabic-name" *ngIf="item.student.first_name_ar">({{ item.student.first_name_ar }} {{ item.student.last_name_ar }})</small>
+          </div>
+        </div>
+
+        <div class="status-buttons-group">
+          <button
+            type="button"
+            class="status-btn btn-present"
+            [class.active]="item.status === 'present'"
+            (click)="setStatus(item, 'present')"
+          >
+            ✓ Présent
+          </button>
+          <button
+            type="button"
+            class="status-btn btn-late"
+            [class.active]="item.status === 'late'"
+            (click)="setStatus(item, 'late')"
+          >
+            ⏰ Retard
+          </button>
+          <button
+            type="button"
+            class="status-btn btn-absent"
+            [class.active]="item.status === 'absent'"
+            (click)="setStatus(item, 'absent')"
+          >
+            ✕ Absent
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="save-footer">
+      <button (click)="saveRollCall()" class="btn btn-primary-gold btn-block">
+        💾 Enregistrer et Valider l'Appel
+      </button>
+    </div>
+  </div>
+</div>

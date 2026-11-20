@@ -1,0 +1,73 @@
+.app-layout {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-body-container {
+  display: flex;
+  flex: 1;
+  min-height: calc(100vh - 65px);
+}
+
+.auth-wrapper {
+  min-height: 100vh;
+}
+
+.mobile-menu-backdrop, .mobile-menu { display: none; }
+
+@media (max-width: 768px) {
+  .app-body-container { flex-direction: column; min-height: 0; }
+
+  /* The sidebar becomes the "Menu" drawer; the bottom tabs take its place. */
+  .desktop-sidebar { display: none; }
+
+  /* Room for the bottom tab bar (and the iPhone home indicator). */
+  .main-content { padding-bottom: calc(4.4rem + env(safe-area-inset-bottom)); }
+
+  .mobile-menu-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: rgba(15, 23, 42, 0.45);
+  }
+
+  .mobile-menu {
+    display: block;
+    position: fixed;
+    z-index: 58;
+    inset-inline: 0;
+    bottom: calc(4rem + env(safe-area-inset-bottom));
+    max-height: calc(100dvh - 7rem);
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 1.25rem 1.25rem 0 0;
+    box-shadow: 0 -12px 30px rgba(15, 23, 42, 0.2);
+    animation: menu-up 0.22s ease-out;
+
+    ::ng-deep .app-sidebar {
+      width: 100%;
+      height: auto;
+      position: static;
+      border: none;
+    }
+  }
+
+  .mobile-menu-handle {
+    width: 2.5rem;
+    height: 0.3rem;
+    margin: 0.6rem auto 0;
+    border-radius: 9999px;
+    background: var(--slate-200);
+  }
+}
+
+@keyframes menu-up {
+  from { transform: translateY(1.5rem); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-menu { animation: none; }
+}
