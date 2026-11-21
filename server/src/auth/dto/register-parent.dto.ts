@@ -14,7 +14,7 @@ import {
 import { PARENT_RELATIONSHIPS, ParentRelationship } from '../../entities/link-request.entity';
 import { IsStrongPassword } from './password.validator';
 
-class ParentChildDto {
+export class ParentChildDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(80)

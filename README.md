@@ -10,7 +10,7 @@ Application de suivi scolaire d’une école primaire privée, pour les parents,
 
 ## Fonctionnalités branchées sur l’API
 
-- **Comptes** : connexion par JWT, mot de passe provisoire à changer à la première connexion, désactivation immédiate des comptes.
+- **Comptes** : connexion par JWT (et « Continuer avec Google » pour les parents si `GOOGLE_CLIENT_ID` est configuré), mot de passe provisoire à changer à la première connexion, désactivation immédiate des comptes.
 - **Parents** :
   - inscription en ligne, validée par l’administration (rattachement à un vrai élève) ;
   - suivi de leurs enfants validés uniquement.

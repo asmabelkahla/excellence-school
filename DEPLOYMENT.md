@@ -62,6 +62,7 @@ Gardez les deux clés affichées (**Public Key** et **Private Key**). Ne les par
    | `ADMIN_EMAIL` | l’email du premier administrateur (ex. `direction@votre-ecole.tn`) |
    | `ADMIN_PASSWORD` | un mot de passe provisoire (8 caractères minimum, avec une lettre et un chiffre) |
    | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | les clés de l’étape 3 |
+   | `GOOGLE_CLIENT_ID` | (facultatif) l’ID client Google, pour « Continuer avec Google » — voir l’étape 8 |
    | `CORS_ORIGINS` | laisser vide (ou un domaine personnalisé, voir l’étape 7) |
 
    `JWT_SECRET` est généré automatiquement. L’adresse de l’API et celle de l’application sont reliées automatiquement entre elles.
@@ -115,3 +116,15 @@ Si `database/schema.sql` a changé, ré-exécutez-le dans l’éditeur SQL de Ne
 - [ ] Une page protégée ouverte sans connexion renvoie vers `/login`
 - [ ] Devoir publié par un enseignant → notification chez le parent (cloche et téléphone)
 - [ ] Sur un téléphone : l’application s’installe et s’ouvre en plein écran
+
+## 8. (Facultatif) « Continuer avec Google » pour les parents
+
+1. https://console.cloud.google.com → projet **Excellence-School** → **API et services → Identifiants** → votre **ID client OAuth** (type « Application Web »).
+2. **Origines JavaScript autorisées** — ajoutez l’adresse exacte de l’application (sans « / » final) :
+   - `https://excellence-web-xxxx.onrender.com` (production)
+   - `http://localhost` et `http://localhost:4201` (tests en local)
+3. **Écran de consentement OAuth** : nom « Excellence School », email d’assistance, logo ; publiez l’application (« En production ») pour que tous les parents puissent l’utiliser.
+4. Dans Render, mettez l’ID client dans `GOOGLE_CLIENT_ID` (service `excellence-api`). Le bouton apparaît tout seul : rien à reconstruire.
+
+Une modification des origines peut prendre **5 minutes à quelques heures** chez Google.
+

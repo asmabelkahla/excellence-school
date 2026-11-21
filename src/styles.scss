@@ -879,3 +879,33 @@ body.rtl-mode, [dir="rtl"] {
   #print-root .official-stamp-circle { transform: scale(0.75); }
   #print-root tr, #print-root .summary-section, #print-root .bulletin-footer { break-inside: avoid; }
 }
+
+/* ---- "Continue with Google" (login / register) ---- */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.1rem 0 0.9rem;
+  color: var(--slate-400);
+  font-size: 0.85rem;
+  font-weight: 700;
+
+  &::before, &::after { content: ''; flex: 1; height: 1px; background: var(--slate-200); }
+}
+.google-btn { display: flex; justify-content: center; min-height: 44px; &.hidden { display: none; } }
+.google-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 1rem;
+  margin-bottom: 1rem;
+  border: 1.5px solid var(--slate-200);
+  border-radius: var(--radius-md);
+  background: var(--slate-50);
+  font-size: 0.9rem;
+
+  .g-logo { flex-shrink: 0; }
+  .g-text { display: flex; flex-direction: column; flex: 1; min-width: 0; overflow-wrap: anywhere;
+    small { color: var(--slate-500); }
+  }
+}

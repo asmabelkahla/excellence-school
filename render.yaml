@@ -39,6 +39,8 @@ services:
         sync: false
       - key: VAPID_PRIVATE_KEY
         sync: false
+      - key: GOOGLE_CLIENT_ID   # optional: "Continuer avec Google" for parents (Google Cloud → OAuth client ID)
+        sync: false
       - key: VAPID_SUBJECT
         value: mailto:contact@excellence-school.tn
 

@@ -10,11 +10,20 @@ import { I18nService, Locale } from './i18n.service';
 const TOKEN_KEY = 'esm_token';
 const USER_KEY = 'esm_current_user';
 const NOTIFICATIONS_KEY = 'esm_notifications_enabled';
+const GOOGLE_SIGNUP_KEY = 'esm_google_signup';
 const CHILDREN_KEY = 'esm_children';
 const SELECTED_CHILD_KEY = 'esm_selected_child';
 
 /** A child validated by the school for the signed-in parent (from `GET /me/children`). */
 export type LinkedChild = Student & { relationship?: string };
+
+interface GoogleSignInResponse {
+  status: 'signed_in' | 'needs_registration';
+  token?: string;
+  user?: UserProfile;
+  registrationToken?: string;
+  profile?: { email: string; fullName: string };
+}
 
 interface AuthResponse {
   user: UserProfile;
@@ -244,15 +253,89 @@ export class AuthService {
         throw new Error('Réponse inattendue du serveur.');
       }
 
-      this.token = response.token;
-      localStorage.setItem(TOKEN_KEY, response.token);
-      this.linkedChildren.set([]);
-      this.selectedStudent.set(null);
-      this.setUser(response.user);
-      await this.loadChildren();
-      return response.user;
+      return await this.startSession(response.token, response.user);
     } catch (error) {
       throw new Error(readableApiError(error, 'Identifiant ou mot de passe incorrect.'));
+    }
+  }
+
+  private async startSession(token: string, user: UserProfile): Promise<UserProfile> {
+    this.token = token;
+    localStorage.setItem(TOKEN_KEY, token);
+    this.linkedChildren.set([]);
+    this.selectedStudent.set(null);
+    this.setUser(user);
+    await this.loadChildren();
+    return user;
+  }
+
+  // ------------------------------------------------------------------ Google
+
+  /** Google client id configured on the API, or null when Google sign-in is off. */
+  async googleClientId(): Promise<string | null> {
+    try {
+      const { clientId } = await firstValueFrom(this.http.get<{ clientId: string | null }>(`${this.apiBase}/auth/google/config`));
+      return clientId;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Sends the Google ID token to the API (which verifies it with Google).
+   * Known parent → signed in. New parent → a registration token is kept for the second step.
+   */
+  async googleSignIn(credential: string): Promise<{ status: 'signed_in'; user: UserProfile } | { status: 'needs_registration' }> {
+    try {
+      const res = await firstValueFrom(this.http.post<GoogleSignInResponse>(`${this.apiBase}/auth/google`, { credential }));
+      if (res.status === 'signed_in' && res.token && res.user) {
+        return { status: 'signed_in', user: await this.startSession(res.token, res.user) };
+      }
+      if (res.status === 'needs_registration' && res.registrationToken && res.profile) {
+        sessionStorage.setItem(GOOGLE_SIGNUP_KEY, JSON.stringify({ token: res.registrationToken, ...res.profile, at: Date.now() }));
+        return { status: 'needs_registration' };
+      }
+      throw new Error('Réponse inattendue du serveur.');
+    } catch (error) {
+      throw new Error(readableApiError(error, 'La connexion avec Google a échoué.'));
+    }
+  }
+
+  /** Verified Google profile waiting for the second registration step (30 minutes). */
+  pendingGoogleSignup(): { token: string; email: string; fullName: string } | null {
+    try {
+      const raw = JSON.parse(sessionStorage.getItem(GOOGLE_SIGNUP_KEY) || 'null');
+      if (!raw || Date.now() - raw.at > 29 * 60 * 1000) return null;
+      return raw;
+    } catch {
+      return null;
+    }
+  }
+
+  clearGoogleSignup(): void {
+    sessionStorage.removeItem(GOOGLE_SIGNUP_KEY);
+  }
+
+  async googleRegister(data: Omit<ParentRegistration, 'fullName' | 'email' | 'password'>): Promise<string> {
+    const pending = this.pendingGoogleSignup();
+    if (!pending) throw new Error('Session Google expirée : cliquez à nouveau sur « Continuer avec Google ».');
+    try {
+      const response = await firstValueFrom(
+        this.http.post<AuthResponse>(`${this.apiBase}/auth/google/register`, {
+          registrationToken: pending.token,
+          phone: data.phone.trim(),
+          relationship: data.relationship,
+          children: data.children.map(child => ({
+            firstName: child.firstName.trim(),
+            lastName: child.lastName.trim(),
+            ...(child.classId ? { classId: child.classId } : {})
+          }))
+        })
+      );
+      this.clearGoogleSignup();
+      return response.message ?? 'Votre demande a bien été enregistrée.';
+    } catch (error) {
+      throw new Error(readableApiError(error, 'L’inscription a échoué.'));
     }
   }
 
@@ -283,6 +366,15 @@ export class AuthService {
     if (user && !user.must_change_password) this.setUser({ ...user, must_change_password: true });
   }
 
+  /** Public list of classes (id + name) for the registration form. */
+  async publicClasses(): Promise<{ id: string; name: string }[]> {
+    try {
+      return await firstValueFrom(this.http.get<{ id: string; name: string }[]>(`${this.apiBase}/auth/classes`));
+    } catch {
+      return [];
+    }
+  }
+
   /** Parent self-registration. The account stays inactive until an admin validates it. */
   async registerParent(data: ParentRegistration): Promise<string> {
     try {
@@ -296,8 +388,8 @@ export class AuthService {
           children: data.children.map(child => ({
             firstName: child.firstName.trim(),
             lastName: child.lastName.trim(),
-            classId: child.classId,
-            className: this.schoolData.classes().find(c => c.id === child.classId)?.name
+            // The API resolves the class name itself from the id.
+            ...(child.classId ? { classId: child.classId } : {})
           }))
         })
       );

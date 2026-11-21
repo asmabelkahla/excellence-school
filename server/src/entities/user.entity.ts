@@ -49,4 +49,8 @@ export class User {
   /** Tokens issued before this instant are rejected (set on every password change). */
   @Column({ type: 'timestamptz', nullable: true, select: false })
   tokens_valid_after: Date | null;
+
+  /** Linked Google account (ID token "sub"). Never sent to the client. */
+  @Column({ type: 'text', nullable: true, unique: true, select: false })
+  google_sub: string | null;
 }

@@ -115,7 +115,7 @@ describe('AuthService', () => {
 
       const req = http.expectOne(`${environment.apiUrl}/auth/register`);
       expect(req.request.body.email).toBe('maya@test.tn');
-      expect(req.request.body.children[0].className).toBe('3ème A');
+      expect(req.request.body.children[0].className).toBeUndefined(); // resolved by the API
       req.flush({ user: { id: 'usr-parent-x', role: 'parent', active: false }, message: 'En attente de validation.' });
 
       expect(await promise).toBe('En attente de validation.');

@@ -9,7 +9,8 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
+import { SchoolClass } from '../entities/class.entity';
 import { LinkRequest } from '../entities/link-request.entity';
 import { ParentStudent } from '../entities/parent-student.entity';
 import { StaffInvitation } from '../entities/staff-invitation.entity';
@@ -18,7 +19,7 @@ import { StaffRole, User } from '../entities/user.entity';
 import { RegisterParentDto } from './dto/register-parent.dto';
 import { ReviewLinkRequestDto } from './dto/review-link-request.dto';
 
-export type SafeUser = Omit<User, 'password' | 'tokens_valid_after'>;
+export type SafeUser = Omit<User, 'password' | 'tokens_valid_after' | 'google_sub'>;
 
 const BCRYPT_ROUNDS = 12;
 // Pre-computed hash used to keep login timing constant when the user does not exist.
@@ -36,13 +37,21 @@ export class AuthService {
     private readonly linkRequestRepository: Repository<LinkRequest>,
     @InjectRepository(StaffInvitation)
     private readonly staffInvitationRepository: Repository<StaffInvitation>,
+    @InjectRepository(SchoolClass)
+    private readonly classRepository: Repository<SchoolClass>,
     private readonly dataSource: DataSource,
     private readonly jwtService: JwtService,
   ) {}
 
+  /** Public list for the registration form: class names only, nothing about students. */
+  async publicClasses() {
+    const list = await this.classRepository.find({ select: ['id', 'name', 'level_id'], order: { level_id: 'ASC', name: 'ASC' } });
+    return list.map(c => ({ id: c.id, name: c.name }));
+  }
+
   private sanitizeUser(user: User): SafeUser {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, tokens_valid_after, ...safeUser } = user;
+    const { password, tokens_valid_after, google_sub, ...safeUser } = user;
     return safeUser;
   }
 
@@ -81,6 +90,20 @@ export class AuthService {
     return { user: this.sanitizeUser(user), token, message: 'Connexion réussie' };
   }
 
+  /** Opens a session for an already-authenticated identity (e.g. Google), with the same checks as login. */
+  async sessionFor(userId: string) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException(INVALID_CREDENTIALS);
+    if (!user.active) {
+      throw new UnauthorizedException(
+        user.role === 'parent'
+          ? 'Votre compte est en attente de validation par l’administration.'
+          : 'Ce compte a été désactivé. Contactez l’administration.',
+      );
+    }
+    return { user: this.sanitizeUser(user), token: await this.signToken(user), message: 'Connexion réussie' };
+  }
+
   private signToken(user: Pick<User, 'id' | 'role' | 'email'>) {
     return this.jwtService.signAsync({ sub: user.id, role: user.role, email: user.email });
   }
@@ -116,7 +139,7 @@ export class AuthService {
    * No student record and no parent↔student link are created here: per the spec the parent
    * sees no school data until an admin approves each request (see reviewLinkRequest).
    */
-  async registerParent(data: RegisterParentDto) {
+  async registerParent(data: RegisterParentDto, google?: { sub: string }) {
     const email = data.email.trim().toLowerCase();
     const existing = await this.userRepository
       .createQueryBuilder('u')
@@ -129,8 +152,17 @@ export class AuthService {
       throw new ConflictException('Un compte existe déjà avec cet email.');
     }
 
+    // Declared classes must exist (the form only offers real ones, but the API never trusts it).
+    const classIds = [...new Set(data.children.map(c => c.classId).filter((id): id is string => !!id))];
+    const classes = classIds.length ? await this.classRepository.find({ where: { id: In(classIds) } }) : [];
+    if (classes.length !== classIds.length) {
+      throw new BadRequestException('Une des classes choisies n’existe pas. Rechargez la page et réessayez.');
+    }
+    const classesById = new Map(classes.map(c => [c.id, c]));
+
     const parentId = this.newId('usr-parent');
-    const passwordHash = await this.hashPassword(data.password);
+    // A Google account has no password: it signs in through Google only.
+    const passwordHash = google ? null : await this.hashPassword(data.password);
 
     const parentUser = await this.dataSource.transaction(async manager => {
       const user = await manager.getRepository(User).save({
@@ -145,6 +177,7 @@ export class AuthService {
         avatar_url: 'assets/avatars/parent.png',
         is_super_admin: false,
         invited_by_id: null,
+        google_sub: google?.sub ?? null,
       });
 
       const requests = data.children.map(child =>
@@ -156,8 +189,9 @@ export class AuthService {
           parent_email: email,
           child_first_name: child.firstName.trim(),
           child_last_name: child.lastName.trim(),
-          declared_class_id: child.classId ?? null,
-          declared_class_name: child.className ?? null,
+          // The class name always comes from the database, never from the browser.
+          declared_class_id: child.classId ? classesById.get(child.classId)!.id : null,
+          declared_class_name: child.classId ? classesById.get(child.classId)!.name : null,
           student_id: null,
           status: 'pending',
           relationship: data.relationship ?? null,

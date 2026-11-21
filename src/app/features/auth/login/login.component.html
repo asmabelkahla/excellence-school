@@ -83,6 +83,11 @@
         </button>
       </form>
 
+      @if (googleReady()) {
+        <div class="auth-divider" role="separator"><span>ou</span></div>
+      }
+      <div #googleBtn class="google-btn" [class.hidden]="!googleReady()"></div>
+
       <p class="auth-footer-link">
         {{ i18n.t('registerPrompt') }}
         <a routerLink="/register">{{ i18n.t('registerHere') }}</a>

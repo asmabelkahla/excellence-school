@@ -16,6 +16,7 @@ import { ParentsService } from './parents.service';
 import { StaffController } from './staff.controller';
 import { StaffService } from './staff.service';
 import { AuthService } from './auth.service';
+import { GoogleAuthService } from './google-auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { RolesGuard } from './roles.guard';
 
@@ -43,7 +44,7 @@ import { RolesGuard } from './roles.guard';
     }),
   ],
   controllers: [AuthController, StaffController, ParentsController, ParentSpaceController],
-  providers: [AuthService, StaffService, ParentsService, ParentSpaceService, JwtAuthGuard, RolesGuard],
+  providers: [AuthService, GoogleAuthService, StaffService, ParentsService, ParentSpaceService, JwtAuthGuard, RolesGuard],
   exports: [AuthService, JwtAuthGuard, RolesGuard, JwtModule],
 })
 export class AuthModule {}

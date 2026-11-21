@@ -89,6 +89,8 @@ CREATE TABLE IF NOT EXISTS staff_invitations (
 ALTER TABLE link_requests ADD COLUMN IF NOT EXISTS relationship TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS tokens_valid_after TIMESTAMPTZ;
+-- Google account linked to this user ("sub" claim of the Google ID token). Parents only.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub TEXT UNIQUE;
 -- Relationship codes are unaccented (mere / pere / tuteur) everywhere.
 UPDATE parent_students SET relationship = 'mere' WHERE relationship IN ('mère', 'Mère');
 UPDATE parent_students SET relationship = 'pere' WHERE relationship IN ('père', 'Père');
