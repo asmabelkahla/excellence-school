@@ -17,6 +17,11 @@ function parseCorsOrigins(): string[] {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  // Behind Render's (or any) reverse proxy: use the visitor's real IP from X-Forwarded-For,
+  // otherwise the login rate limit would count every visitor as the same address.
+  if (process.env.NODE_ENV === 'production' || process.env.TRUST_PROXY === 'true') {
+    app.getHttpAdapter().getInstance().set('trust proxy', 1);
+  }
   app.setGlobalPrefix('api');
   app.use(helmet());
 

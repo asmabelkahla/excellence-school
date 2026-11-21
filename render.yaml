@@ -8,7 +8,8 @@ services:
     plan: free            # sleeps after 15 min without traffic, wakes up in ~1 min
     region: frankfurt     # closest Render region to Tunisia
     rootDir: server
-    buildCommand: npm ci && npm run build
+    # --include=dev: NODE_ENV=production would otherwise skip the compiler (Nest CLI, TypeScript).
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
@@ -24,12 +25,7 @@ services:
         generateValue: true
       - key: JWT_EXPIRES_IN
         value: 7d
-      - key: FRONTEND_HOST  # allows the front-end origin through CORS
-        fromService:
-          type: web
-          name: excellence-web
-          property: host
-      - key: CORS_ORIGINS   # optional extra origins (e.g. a custom domain), comma-separated
+      - key: CORS_ORIGINS   # public URL of excellence-web, e.g. https://excellence-web-xxxx.onrender.com (comma-separated if several)
         sync: false
       - key: ADMIN_EMAIL    # first admin, created only if no admin exists
         sync: false
@@ -53,11 +49,8 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "20"
-      - key: API_HOST
-        fromService:
-          type: web
-          name: excellence-api
-          property: host
+      - key: API_URL        # public URL of excellence-api + /api, e.g. https://excellence-api-xxxx.onrender.com/api
+        sync: false
     routes:
       # Single-page app: every unknown path serves index.html (existing files are served as is).
       - type: rewrite

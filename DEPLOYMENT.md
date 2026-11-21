@@ -63,11 +63,15 @@ Gardez les deux clés affichées (**Public Key** et **Private Key**). Ne les par
    | `ADMIN_PASSWORD` | un mot de passe provisoire (8 caractères minimum, avec une lettre et un chiffre) |
    | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | les clés de l’étape 3 |
    | `GOOGLE_CLIENT_ID` | (facultatif) l’ID client Google, pour « Continuer avec Google » — voir l’étape 8 |
-   | `CORS_ORIGINS` | laisser vide (ou un domaine personnalisé, voir l’étape 7) |
+   | `CORS_ORIGINS` | mettez `https://a-completer.invalid` pour l’instant (corrigé au point 5) |
+   | `API_URL` (service `excellence-web`) | mettez `https://a-completer.invalid/api` pour l’instant (corrigé au point 5) |
 
-   `JWT_SECRET` est généré automatiquement. L’adresse de l’API et celle de l’application sont reliées automatiquement entre elles.
+   `JWT_SECRET` est généré automatiquement.
 4. Cliquez sur **Apply**. La première construction prend 5 à 10 minutes.
-5. L’application est en ligne à l’adresse affichée pour `excellence-web` (ex. `https://excellence-web.onrender.com`).
+5. **Relier l’application et l’API** (une seule fois) — Render affiche maintenant l’adresse publique de chaque service, en haut de sa page :
+   - ouvrez `excellence-api` → **Environment** → `CORS_ORIGINS` = l’adresse de `excellence-web` (ex. `https://excellence-web-ab12.onrender.com`, sans « / » final) → **Save** ;
+   - ouvrez `excellence-web` → **Environment** → `API_URL` = l’adresse de `excellence-api` suivie de `/api` (ex. `https://excellence-api-cd34.onrender.com/api`) → **Save, rebuild and deploy**.
+6. L’application est en ligne à l’adresse de `excellence-web`.
 
 ## 5. Première connexion
 
