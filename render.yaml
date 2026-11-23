@@ -1,5 +1,6 @@
 # Render Blueprint — 100 % free deployment (Render free plan + Neon free PostgreSQL).
 # Render dashboard → New → Blueprint → choose this repository. See DEPLOYMENT.md.
+# Every push to main runs CI (GitHub Actions); Render deploys only when it is green.
 services:
   # ---------------------------------------------------------------- API (NestJS)
   - type: web
@@ -8,6 +9,8 @@ services:
     plan: free            # sleeps after 15 min without traffic, wakes up in ~1 min
     region: frankfurt     # closest Render region to Tunisia
     rootDir: server
+    # CD: deploy main only after the GitHub Actions checks pass (.github/workflows/ci.yml).
+    autoDeployTrigger: checksPass
     # --include=dev: NODE_ENV=production would otherwise skip the compiler (Nest CLI, TypeScript).
     buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
@@ -44,6 +47,7 @@ services:
   - type: web
     name: excellence-web
     runtime: static
+    autoDeployTrigger: checksPass
     buildCommand: npm ci && node scripts/set-api-url.mjs && npx ng build --configuration production
     staticPublishPath: dist/excellence-school/browser
     envVars:

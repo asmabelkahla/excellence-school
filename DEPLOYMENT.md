@@ -107,9 +107,13 @@ Envoyez aux parents l’adresse de l’application. Ensuite :
 
 La page **Menu → Installer l’App Mobile** guide les parents pas à pas.
 
-## Mettre à jour
+## Mettre à jour (CI/CD)
 
-Chaque `git push` sur `main` redéploie automatiquement. Les téléphones affichent alors « Une nouvelle version est prête » → **Mettre à jour**.
+Chaque `git push` sur `main` lance d’abord les **tests automatiques** sur GitHub (onglet **Actions** du dépôt) : tests de l’application, build de production, build de l’API et tests de bout en bout sur une base PostgreSQL de test. **Render ne déploie que si tous les tests passent** (`autoDeployTrigger: checksPass`). Si un test échoue, la version en ligne reste inchangée.
+
+Vérifiez une fois dans Render, pour chaque service : **Settings → Build & Deploy → Auto-Deploy** = *After CI Checks Pass*.
+
+Une fois la nouvelle version déployée, les téléphones affichent « Une nouvelle version est prête » → **Mettre à jour**.
 Si `database/schema.sql` a changé, ré-exécutez-le dans l’éditeur SQL de Neon : il est rejouable sans risque.
 
 ## Vérifications après déploiement
