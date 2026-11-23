@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { InviteStaffDto } from './dto/invite-staff.dto';
 import { LoginDto } from './dto/login.dto';
@@ -108,6 +108,22 @@ export class AuthController {
   @Roles('admin')
   reviewLinkRequest(@Param('id') id: string, @Body() dto: ReviewLinkRequestDto) {
     return this.authService.reviewLinkRequest(id, dto);
+  }
+
+  /** Undo a refusal (within 24 h). */
+  @Post('link-requests/:id/restore')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  restoreLinkRequest(@Param('id') id: string) {
+    return this.authService.restoreLinkRequest(id);
+  }
+
+  /** Delete a refused request (and the parent's empty account). */
+  @Delete('link-requests/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  deleteLinkRequest(@Param('id') id: string) {
+    return this.authService.deleteLinkRequest(id);
   }
 
   /** Parents who registered without declaring a child. */

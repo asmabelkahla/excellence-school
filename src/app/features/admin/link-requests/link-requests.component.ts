@@ -35,6 +35,7 @@ export class LinkRequestsComponent implements OnInit {
   /** Class of the student created at approval. */
   newStudentClassId = '';
   readonly accountBusy = signal<string | null>(null);
+  readonly historyBusy = signal<string | null>(null);
   adminNote = '';
 
   /** Students sorted so the likeliest matches for the open request come first. */
@@ -110,6 +111,40 @@ export class LinkRequestsComponent implements OnInit {
       this.modalError.set(error instanceof Error ? error.message : 'Erreur inattendue.');
     } finally {
       this.submitting.set(null);
+    }
+  }
+
+  /** Undo a refusal made by mistake: the request goes back to "Demandes en attente". */
+  async restoreRequest(req: LinkRequest): Promise<void> {
+    await this.runHistoryAction(req, async () => {
+      await this.store.restore(req.id);
+      this.showSuccess(`Demande de ${req.parent_name ?? 'ce parent'} restaurée : elle est de nouveau en attente.`);
+    });
+  }
+
+  /** Deletes a refused request — and the parent's account when nothing else is left. */
+  async deleteRequest(req: LinkRequest): Promise<void> {
+    if (!confirm(`Supprimer définitivement la demande refusée de ${req.parent_name ?? 'ce parent'} (${req.child_first_name} ${req.child_last_name}) ?
+
+Si le parent n’a aucune autre demande ni enfant rattaché, son compte sera aussi supprimé.`)) return;
+    await this.runHistoryAction(req, async () => {
+      const { parent_deleted } = await this.store.remove(req.id);
+      this.showSuccess(parent_deleted
+        ? `Demande et compte de ${req.parent_name ?? 'ce parent'} supprimés.`
+        : `Demande supprimée. Le compte de ${req.parent_name ?? 'ce parent'} est conservé (autres demandes ou enfants).`);
+    });
+  }
+
+  private async runHistoryAction(req: LinkRequest, action: () => Promise<void>): Promise<void> {
+    if (this.historyBusy()) return;
+    this.historyBusy.set(req.id);
+    this.store.error.set(null);
+    try {
+      await action();
+    } catch (error) {
+      this.store.error.set(error instanceof Error ? error.message : 'Erreur inattendue.');
+    } finally {
+      this.historyBusy.set(null);
     }
   }
 

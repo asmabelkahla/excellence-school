@@ -83,6 +83,40 @@ r = await call('POST', `/auth/link-requests/${req.id}/review`, admin, { decision
 const after = (await call('GET', '/students', admin)).json.length;
 check('linking an existing student creates no duplicate', r.status === 201 && r.json.student_created === false && before === after);
 
+// 7. Refusal by mistake → restore (24 h), or delete the refused parent
+const emailD = `refuse.${stamp}@test.tn`;
+await call('POST', '/auth/register', null, { fullName: 'Parent Refusé', phone: '4', email: emailD, password: 'Secret123', children: [{ firstName: 'Sami', lastName: `Refus${stamp}`, classId: 'cls-2a' }] });
+req = (await call('GET', '/auth/link-requests', admin)).json.find(x => x.child_last_name === `Refus${stamp}`);
+r = await call('POST', `/auth/link-requests/${req.id}/review`, admin, { decision: 'rejected' });
+check('refusal records its date', r.status === 201 && !!r.json.reviewed_at);
+r = await call('POST', `/auth/link-requests/${req.id}/restore`, admin);
+check('admin restores a refused request', r.status === 201 && r.json.status === 'pending');
+req = (await call('GET', '/auth/link-requests', admin)).json.find(x => x.id === req.id);
+check('restored request is back in the waiting list', req.status === 'pending' && req.reviewed_at === null);
+r = await call('POST', `/auth/link-requests/${req.id}/restore`, admin);
+check('a pending request cannot be "restored"', r.status === 400);
+r = await call('DELETE', `/auth/link-requests/${req.id}`, admin);
+check('a pending request cannot be deleted', r.status === 400);
+const approvedId = (await call('GET', '/auth/link-requests', admin)).json.find(x => x.status === 'approved').id;
+r = await call('DELETE', `/auth/link-requests/${approvedId}`, admin);
+check('an approved request cannot be deleted', r.status === 400);
+r = await call('POST', `/auth/link-requests/${req.id}/restore`, (await call('POST', '/auth/login', null, { identifier: 'econome@excellence.tn', password: 'Econome123!' })).json.token);
+check('only the admin can restore', r.status === 403);
+
+await call('POST', `/auth/link-requests/${req.id}/review`, admin, { decision: 'rejected' });
+r = await call('DELETE', `/auth/link-requests/${req.id}`, admin);
+check('admin deletes the refused request → empty parent account deleted', r.status === 200 && r.json.parent_deleted === true);
+r = await call('GET', '/parents', admin);
+check('deleted parent is gone from the parents list', !r.json.some(p => p.email === emailD));
+
+// A parent with two children: deleting one refused request keeps the account
+const emailE = `deux.${stamp}@test.tn`;
+await call('POST', '/auth/register', null, { fullName: 'Parent Deux', phone: '5', email: emailE, password: 'Secret123', children: [{ firstName: 'A', lastName: `Un${stamp}` }, { firstName: 'B', lastName: `Deux${stamp}` }] });
+req = (await call('GET', '/auth/link-requests', admin)).json.find(x => x.child_last_name === `Un${stamp}`);
+await call('POST', `/auth/link-requests/${req.id}/review`, admin, { decision: 'rejected' });
+r = await call('DELETE', `/auth/link-requests/${req.id}`, admin);
+check('parent with another request keeps the account', r.status === 200 && r.json.parent_deleted === false);
+
 console.log(results.join('\n'));
 const passed = results.filter(l => l.startsWith('PASS')).length;
 console.log(`\n${passed}/${results.length} passed`);

@@ -141,6 +141,7 @@
               <th scope="col">Élève rattaché</th>
               <th scope="col">Statut</th>
               <th scope="col">Note</th>
+              <th scope="col" class="col-action">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -155,6 +156,22 @@
                   </span>
                 </td>
                 <td class="text-xs text-slate-500">{{ req.admin_note || '—' }}</td>
+                <td class="col-action">
+                  @if (req.status === 'rejected') {
+                    <div class="row-actions">
+                      @let hoursLeft = store.restoreHoursLeft(req);
+                      @if (hoursLeft > 0) {
+                        <button type="button" class="btn btn-sm btn-outline-gold" (click)="restoreRequest(req)" [disabled]="historyBusy() === req.id"
+                                [title]="'Remettre la demande en attente — encore ' + hoursLeft + ' h'">
+                          ↺ Restaurer <small class="hours-left">· {{ hoursLeft }} h</small>
+                        </button>
+                      }
+                      <button type="button" class="btn btn-sm btn-outline-danger" (click)="deleteRequest(req)" [disabled]="historyBusy() === req.id">
+                        Supprimer
+                      </button>
+                    </div>
+                  } @else { <span class="text-slate-300">—</span> }
+                </td>
               </tr>
             }
           </tbody>

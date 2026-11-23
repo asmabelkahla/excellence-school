@@ -64,4 +64,7 @@
 }
 
 .section-hint { margin: 0 0 0.75rem; }
-.row-actions { display: inline-flex; gap: 0.4rem; flex-wrap: wrap; justify-content: flex-end; }
+.row-actions { display: inline-flex; gap: 0.4rem; flex-wrap: wrap; justify-content: flex-end;
+  .btn { white-space: nowrap; }
+}
+.hours-left { font-weight: 600; opacity: 0.75; }

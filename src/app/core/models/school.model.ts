@@ -103,6 +103,8 @@ export interface LinkRequest {
   student_id?: string;
   status: LinkStatus;
   admin_note?: string;
+  /** When the request was approved or refused. */
+  reviewed_at?: string | null;
   created_at: string;
 }
 

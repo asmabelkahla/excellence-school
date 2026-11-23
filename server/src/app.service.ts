@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { hashPassword } from './auth/passwords';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 
 @Injectable()
@@ -13,13 +13,23 @@ export class AppService implements OnModuleInit {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly config: ConfigService,
+    private readonly dataSource: DataSource,
   ) {}
+
+  /**
+   * Small, idempotent schema upgrades applied at startup, so a deployed database
+   * (e.g. Neon) never lags behind the code. database/schema.sql holds the same lines.
+   */
+  private async upgradeSchema() {
+    await this.dataSource.query('ALTER TABLE link_requests ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ');
+  }
 
   /**
    * Creates the first super-admin only when no admin exists yet and
    * ADMIN_EMAIL / ADMIN_PASSWORD are provided. Never ships a default password.
    */
   async onModuleInit() {
+    await this.upgradeSchema();
     const adminCount = await this.userRepository.count({ where: { role: 'admin' } });
     if (adminCount > 0) return;
 

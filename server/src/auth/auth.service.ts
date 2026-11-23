@@ -22,6 +22,8 @@ import { ReviewLinkRequestDto } from './dto/review-link-request.dto';
 export type SafeUser = Omit<User, 'password' | 'tokens_valid_after' | 'google_sub'>;
 
 const INVALID_CREDENTIALS = 'Identifiant ou mot de passe incorrect.';
+/** A refused request can be put back in the waiting list for this long. */
+export const RESTORE_WINDOW_HOURS = 24;
 
 @Injectable()
 export class AuthService {
@@ -226,11 +228,13 @@ export class AuthService {
     }
 
     if (dto.decision === 'rejected') {
+      const reviewedAt = new Date();
       await this.linkRequestRepository.update(id, {
         status: 'rejected',
         admin_note: dto.adminNote ?? request.admin_note,
+        reviewed_at: reviewedAt,
       });
-      return { ...request, status: 'rejected' };
+      return { ...request, status: 'rejected', reviewed_at: reviewedAt };
     }
 
     // Either an existing student, or a new one created from what the parent declared.
@@ -270,6 +274,7 @@ export class AuthService {
         status: 'approved',
         student_id: student.id,
         admin_note: dto.adminNote ?? request.admin_note,
+        reviewed_at: new Date(),
       });
       // The parent account becomes usable once at least one child is validated.
       await manager.getRepository(User).update(request.parent_id, { active: true });
@@ -277,6 +282,46 @@ export class AuthService {
     });
 
     return { ...request, status: 'approved', student_id: student.id, student_created: !existing, student };
+  }
+
+  /** A refusal made by mistake: back to the waiting list, within RESTORE_WINDOW_HOURS. */
+  async restoreLinkRequest(id: string) {
+    const request = await this.linkRequestRepository.findOne({ where: { id } });
+    if (!request) throw new NotFoundException('Demande introuvable.');
+    if (request.status !== 'rejected') {
+      throw new BadRequestException('Seule une demande refusée peut être restaurée.');
+    }
+    const limit = RESTORE_WINDOW_HOURS * 3600 * 1000;
+    if (!request.reviewed_at || Date.now() - new Date(request.reviewed_at).getTime() > limit) {
+      throw new BadRequestException(
+        `Le délai de ${RESTORE_WINDOW_HOURS} h pour restaurer cette demande est dépassé. Le parent peut refaire une demande depuis l’inscription.`,
+      );
+    }
+    await this.linkRequestRepository.update(id, { status: 'pending', reviewed_at: null });
+    return { ...request, status: 'pending', reviewed_at: null };
+  }
+
+  /**
+   * Deletes a refused request. When the parent has nothing else (no other request,
+   * no linked child) and was never activated, the empty account goes too.
+   */
+  async deleteLinkRequest(id: string) {
+    const request = await this.linkRequestRepository.findOne({ where: { id } });
+    if (!request) throw new NotFoundException('Demande introuvable.');
+    if (request.status !== 'rejected') {
+      throw new BadRequestException('Seule une demande refusée peut être supprimée.');
+    }
+    return this.dataSource.transaction(async manager => {
+      await manager.getRepository(LinkRequest).delete({ id });
+      const [others, links, parent] = await Promise.all([
+        manager.getRepository(LinkRequest).count({ where: { parent_id: request.parent_id } }),
+        manager.getRepository(ParentStudent).count({ where: { parent_id: request.parent_id } }),
+        manager.getRepository(User).findOne({ where: { id: request.parent_id } }),
+      ]);
+      const removeParent = !!parent && parent.role === 'parent' && !parent.active && others === 0 && links === 0;
+      if (removeParent) await manager.getRepository(User).delete({ id: parent.id });
+      return { id, deleted: true, parent_deleted: removeParent };
+    });
   }
 
   // ------------------------------------------- registrations without a child

@@ -122,4 +122,29 @@ describe('LinkRequestsService', () => {
     await promise;
     expect(service.pendingAccounts().length).toBe(0);
   });
+
+  it('allows restoring a refusal for 24 h only', () => {
+    const now = Date.parse('2026-11-23T12:00:00Z');
+    const refused = (hoursAgo: number) => request({ status: 'rejected', reviewed_at: new Date(now - hoursAgo * 3600_000).toISOString() });
+    expect(service.restoreHoursLeft(refused(1), now)).toBe(23);
+    expect(service.restoreHoursLeft(refused(23.5), now)).toBe(1);
+    expect(service.restoreHoursLeft(refused(25), now)).toBe(0);
+    expect(service.restoreHoursLeft(request({ status: 'rejected', reviewed_at: null }), now)).toBe(0);
+    expect(service.restoreHoursLeft(request({ status: 'approved', reviewed_at: new Date(now).toISOString() }), now)).toBe(0);
+  });
+
+  it('restores a refused request and deletes another', async () => {
+    await loadWith([request({ id: 'lr-1', status: 'rejected' }), request({ id: 'lr-2', status: 'rejected' })]);
+    let promise: Promise<unknown> = service.restore('lr-1');
+    http.expectOne(`${api}/auth/link-requests/lr-1/restore`).flush({});
+    await promise;
+    expect(service.pendingCount()).toBe(1);
+
+    promise = service.remove('lr-2');
+    const del = http.expectOne(`${api}/auth/link-requests/lr-2`);
+    expect(del.request.method).toBe('DELETE');
+    del.flush({ id: 'lr-2', deleted: true, parent_deleted: true });
+    expect(await promise).toEqual(jasmine.objectContaining({ parent_deleted: true }));
+    expect(service.requests().some(r => r.id === 'lr-2')).toBeFalse();
+  });
 });

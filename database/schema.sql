@@ -87,6 +87,8 @@ CREATE TABLE IF NOT EXISTS staff_invitations (
 
 -- Migration for databases created before the relationship column existed
 ALTER TABLE link_requests ADD COLUMN IF NOT EXISTS relationship TEXT;
+-- When the admin approved / refused the request (a refusal can be undone for 24 h).
+ALTER TABLE link_requests ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS tokens_valid_after TIMESTAMPTZ;
 -- Google account linked to this user ("sub" claim of the Google ID token). Parents only.

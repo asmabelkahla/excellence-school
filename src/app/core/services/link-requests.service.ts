@@ -26,6 +26,9 @@ export interface PendingAccount {
 
 export interface ClassOption { id: string; name: string; }
 
+/** A refusal can be undone for this long (same rule as the API). */
+export const RESTORE_WINDOW_HOURS = 24;
+
 /** Parent registration requests, read from and validated through the API (admin only). */
 @Injectable({ providedIn: 'root' })
 export class LinkRequestsService {
@@ -101,6 +104,36 @@ export class LinkRequestsService {
       return updated;
     } catch (error) {
       throw new Error(readableApiError(error, 'La décision n’a pas pu être enregistrée.'));
+    }
+  }
+
+  /** Hours left to undo a refusal, or 0 when it can no longer be restored. */
+  restoreHoursLeft(req: LinkRequest, now = Date.now()): number {
+    if (req.status !== 'rejected' || !req.reviewed_at) return 0;
+    const left = RESTORE_WINDOW_HOURS * 3600_000 - (now - new Date(req.reviewed_at).getTime());
+    return left > 0 ? Math.ceil(left / 3600_000) : 0;
+  }
+
+  /** Puts a refused request back in the waiting list (within 24 h). */
+  async restore(requestId: string): Promise<void> {
+    try {
+      await firstValueFrom(this.http.post(`${this.apiBase}/auth/link-requests/${encodeURIComponent(requestId)}/restore`, {}));
+      this.requests.update(list => list.map(r => (r.id === requestId ? { ...r, status: 'pending', reviewed_at: null } : r)));
+    } catch (error) {
+      throw new Error(readableApiError(error, 'La demande n’a pas pu être restaurée.'));
+    }
+  }
+
+  /** Deletes a refused request; the API also removes the parent's account if it is empty. */
+  async remove(requestId: string): Promise<{ parent_deleted: boolean }> {
+    try {
+      const result = await firstValueFrom(
+        this.http.delete<{ parent_deleted: boolean }>(`${this.apiBase}/auth/link-requests/${encodeURIComponent(requestId)}`)
+      );
+      this.requests.update(list => list.filter(r => r.id !== requestId));
+      return result;
+    } catch (error) {
+      throw new Error(readableApiError(error, 'La demande n’a pas pu être supprimée.'));
     }
   }
 

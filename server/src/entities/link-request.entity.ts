@@ -44,6 +44,10 @@ export class LinkRequest {
   @Column({ type: 'text', nullable: true })
   admin_note: string | null;
 
+  /** Set when the request is approved or refused. */
+  @Column({ type: 'timestamptz', nullable: true })
+  reviewed_at: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 }
