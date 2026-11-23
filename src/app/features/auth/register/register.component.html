@@ -112,28 +112,26 @@
           </fieldset>
 
           <fieldset class="form-step">
-            <legend><span class="step-num">2</span> {{ i18n.t('childDeclaration') }}</legend>
-            <p class="form-hint step-hint">L’administration rattachera chaque enfant à son dossier scolaire.</p>
+            <legend><span class="step-num">2</span> {{ i18n.t('childDeclaration') }} <span class="optional-tag">facultatif</span></legend>
+            <p class="form-hint step-hint">L’administration rattachera chaque enfant à son dossier scolaire. Vous pouvez aussi passer cette étape et déclarer vos enfants plus tard, depuis votre espace parent.</p>
 
             @for (child of children; track $index; let i = $index) {
               <div class="child-card">
                 <div class="child-card-header">
                   <span class="badge badge-gold">Enfant {{ i + 1 }}</span>
-                  @if (children.length > 1) {
-                    <button type="button" class="btn-remove" (click)="removeChildField(i)"
-                            [attr.aria-label]="'Retirer l’enfant ' + (i + 1)">Retirer</button>
-                  }
+                  <button type="button" class="btn-remove" (click)="removeChildField(i)"
+                          [attr.aria-label]="'Retirer l’enfant ' + (i + 1)">Retirer</button>
                 </div>
                 <div class="grid-3">
                   <div class="form-group">
-                    <label class="form-label" [for]="'fn_' + i">{{ i18n.t('childFirstName') }} *</label>
+                    <label class="form-label" [for]="'fn_' + i">{{ i18n.t('childFirstName') }}</label>
                     <input [id]="'fn_' + i" [attr.aria-label]="i18n.t('childFirstName') + ' ' + (i + 1)" type="text" [(ngModel)]="child.firstName" [name]="'fn_' + i" class="form-input"
-                           [attr.aria-invalid]="submitted() && !child.firstName.trim()" />
+                           [attr.aria-invalid]="submitted() && childIncomplete(child) && !child.firstName.trim()" />
                   </div>
                   <div class="form-group">
-                    <label class="form-label" [for]="'ln_' + i">{{ i18n.t('childLastName') }} *</label>
+                    <label class="form-label" [for]="'ln_' + i">{{ i18n.t('childLastName') }}</label>
                     <input [id]="'ln_' + i" [attr.aria-label]="i18n.t('childLastName') + ' ' + (i + 1)" type="text" [(ngModel)]="child.lastName" [name]="'ln_' + i" class="form-input"
-                           [attr.aria-invalid]="submitted() && !child.lastName.trim()" />
+                           [attr.aria-invalid]="submitted() && childIncomplete(child) && !child.lastName.trim()" />
                   </div>
                   <div class="form-group">
                     <label class="form-label" [for]="'cls_' + i">{{ i18n.t('selectClass') }}</label>

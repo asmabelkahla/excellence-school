@@ -37,7 +37,7 @@ export interface ParentRegistration {
   email: string;
   password: string;
   relationship?: 'mere' | 'pere' | 'tuteur';
-  children: { firstName: string; lastName: string; classId?: string }[];
+  children?: { firstName: string; lastName: string; classId?: string }[];
 }
 
 const HOME_BY_ROLE: Record<UserRole, string> = {
@@ -325,7 +325,7 @@ export class AuthService {
           registrationToken: pending.token,
           phone: data.phone.trim(),
           relationship: data.relationship,
-          children: data.children.map(child => ({
+          children: (data.children ?? []).map(child => ({
             firstName: child.firstName.trim(),
             lastName: child.lastName.trim(),
             ...(child.classId ? { classId: child.classId } : {})
@@ -385,7 +385,7 @@ export class AuthService {
           email: data.email.trim().toLowerCase(),
           password: data.password,
           relationship: data.relationship,
-          children: data.children.map(child => ({
+          children: (data.children ?? []).map(child => ({
             firstName: child.firstName.trim(),
             lastName: child.lastName.trim(),
             // The API resolves the class name itself from the id.

@@ -1,7 +1,6 @@
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
-  ArrayMinSize,
   IsArray,
   IsEmail,
   IsIn,
@@ -57,10 +56,11 @@ export class RegisterParentDto {
   @IsIn(PARENT_RELATIONSHIPS)
   relationship?: ParentRelationship;
 
+  /** Optional: a parent may register first and declare children later from their space. */
+  @IsOptional()
   @IsArray()
-  @ArrayMinSize(1)
   @ArrayMaxSize(10)
   @ValidateNested({ each: true })
   @Type(() => ParentChildDto)
-  children: ParentChildDto[];
+  children?: ParentChildDto[];
 }

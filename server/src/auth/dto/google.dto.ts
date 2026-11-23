@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsIn, IsNotEmpty, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsIn, IsNotEmpty, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
 import { PARENT_RELATIONSHIPS, ParentRelationship } from '../../entities/link-request.entity';
 import { ParentChildDto } from './register-parent.dto';
 
@@ -27,10 +27,10 @@ export class GoogleRegisterDto {
   @IsIn(PARENT_RELATIONSHIPS)
   relationship?: ParentRelationship;
 
+  @IsOptional()
   @IsArray()
-  @ArrayMinSize(1, { message: 'Déclarez au moins un enfant.' })
   @ArrayMaxSize(10)
   @ValidateNested({ each: true })
   @Type(() => ParentChildDto)
-  children: ParentChildDto[];
+  children?: ParentChildDto[];
 }

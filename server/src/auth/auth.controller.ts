@@ -109,4 +109,26 @@ export class AuthController {
   reviewLinkRequest(@Param('id') id: string, @Body() dto: ReviewLinkRequestDto) {
     return this.authService.reviewLinkRequest(id, dto);
   }
+
+  /** Parents who registered without declaring a child. */
+  @Get('pending-accounts')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  pendingAccounts() {
+    return this.authService.listPendingAccounts();
+  }
+
+  @Post('pending-accounts/:id/activate')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  activatePendingAccount(@Param('id') id: string) {
+    return this.authService.activatePendingAccount(id);
+  }
+
+  @Post('pending-accounts/:id/reject')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  rejectPendingAccount(@Param('id') id: string) {
+    return this.authService.rejectPendingAccount(id);
+  }
 }

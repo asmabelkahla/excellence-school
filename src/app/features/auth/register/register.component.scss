@@ -143,3 +143,14 @@
   color: var(--slate-700);
   font-size: 0.92rem;
 }
+
+.optional-tag {
+  margin-inline-start: 0.4rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 9999px;
+  background: var(--slate-100);
+  color: var(--slate-600);
+  font-size: 0.72rem;
+  font-weight: 700;
+  vertical-align: middle;
+}

@@ -2,7 +2,10 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LinkRequest } from '../../../core/models/school.model';
-import { LinkRequestsService, StudentOption } from '../../../core/services/link-requests.service';
+import { LinkRequestsService, PendingAccount, StudentOption } from '../../../core/services/link-requests.service';
+
+/** Score of a student whose first and last names both match the declaration. */
+export const SAME_NAME = 4;
 
 const RELATIONSHIP_LABELS: Record<string, string> = { mere: 'Mère', pere: 'Père', tuteur: 'Tuteur' };
 
@@ -20,13 +23,18 @@ function normalize(value: string | null | undefined): string {
 })
 export class LinkRequestsComponent implements OnInit {
   readonly store = inject(LinkRequestsService);
+  readonly SAME_NAME = SAME_NAME;
 
   readonly selectedRequest = signal<LinkRequest | null>(null);
   readonly submitting = signal<'approved' | 'rejected' | null>(null);
   readonly modalError = signal<string | null>(null);
   readonly actionSuccess = signal('');
 
+  /** '' = create a new student from the declaration. */
   selectedStudentId = '';
+  /** Class of the student created at approval. */
+  newStudentClassId = '';
+  readonly accountBusy = signal<string | null>(null);
   adminNote = '';
 
   /** Students sorted so the likeliest matches for the open request come first. */
@@ -62,9 +70,10 @@ export class LinkRequestsComponent implements OnInit {
     this.selectedRequest.set(req);
     this.modalError.set(null);
     this.adminNote = '';
-    // Pre-select the best match only when it is a confident one (same first and last name).
+    // Pre-select only a confident match (same first AND last name); otherwise "new student".
     const best = this.studentOptions()[0];
-    this.selectedStudentId = req.student_id || (best && best.score >= 2 ? best.student.id : '');
+    this.selectedStudentId = req.student_id || (best && best.score >= SAME_NAME ? best.student.id : '');
+    this.newStudentClassId = req.declared_class_id ?? '';
   }
 
   closeReview(): void {
@@ -76,23 +85,25 @@ export class LinkRequestsComponent implements OnInit {
     const req = this.selectedRequest();
     if (!req || this.submitting()) return;
 
-    if (decision === 'approved' && !this.selectedStudentId) {
-      this.modalError.set('Choisissez l’élève à rattacher avant d’approuver.');
+    if (decision === 'approved' && !this.selectedStudentId && !this.newStudentClassId) {
+      this.modalError.set('Choisissez la classe du nouvel élève, ou un élève déjà inscrit.');
       return;
     }
 
     this.submitting.set(decision);
     this.modalError.set(null);
     try {
-      await this.store.review(req.id, {
+      const result = await this.store.review(req.id, {
         decision,
         studentId: this.selectedStudentId,
+        classId: this.newStudentClassId,
         adminNote: this.adminNote
       });
       this.selectedRequest.set(null);
+      const child = this.studentLabel(result.student_id) || `${req.child_first_name} ${req.child_last_name}`;
       this.showSuccess(
         decision === 'approved'
-          ? `Demande approuvée : ${req.parent_name ?? 'le parent'} est rattaché(e) à ${this.studentLabel(this.selectedStudentId)} et son compte est activé.`
+          ? `Demande approuvée : ${req.parent_name ?? 'le parent'} est rattaché(e) à ${child}${result.student_created ? ' (nouvel élève ajouté à sa classe)' : ''} et son compte est activé.`
           : `Demande refusée pour ${req.parent_name ?? 'le parent'}.`
       );
     } catch (error) {
@@ -102,17 +113,41 @@ export class LinkRequestsComponent implements OnInit {
     }
   }
 
+  async activateAccount(account: PendingAccount): Promise<void> {
+    await this.runAccountAction(account, () => this.store.activateAccount(account.id),
+      `Compte de ${account.full_name} activé. Il pourra déclarer ses enfants depuis son espace.`);
+  }
+
+  async rejectAccount(account: PendingAccount): Promise<void> {
+    if (!confirm(`Refuser l’inscription de ${account.full_name} ? Le compte sera supprimé.`)) return;
+    await this.runAccountAction(account, () => this.store.rejectAccount(account.id),
+      `Inscription de ${account.full_name} refusée.`);
+  }
+
+  private async runAccountAction(account: PendingAccount, action: () => Promise<void>, success: string): Promise<void> {
+    if (this.accountBusy()) return;
+    this.accountBusy.set(account.id);
+    try {
+      await action();
+      this.showSuccess(success);
+    } catch (error) {
+      this.store.error.set(error instanceof Error ? error.message : 'Erreur inattendue.');
+    } finally {
+      this.accountBusy.set(null);
+    }
+  }
+
   private showSuccess(message: string): void {
     clearTimeout(this.successTimer);
     this.actionSuccess.set(message);
     this.successTimer = setTimeout(() => this.actionSuccess.set(''), 5000);
   }
 
-  /** 1 point per matching name, 1 more for the declared class. */
-  private matchScore(req: LinkRequest, s: StudentOption): number {
+  /** 2 points per matching name, 1 for the declared class: ≥ 4 means same first and last name. */
+  matchScore(req: LinkRequest, s: StudentOption): number {
     let score = 0;
-    if (normalize(s.first_name) === normalize(req.child_first_name)) score++;
-    if (normalize(s.last_name) === normalize(req.child_last_name)) score++;
+    if (normalize(s.first_name) === normalize(req.child_first_name)) score += 2;
+    if (normalize(s.last_name) === normalize(req.child_last_name)) score += 2;
     if (req.declared_class_id ? s.class_id === req.declared_class_id
         : normalize(s.class_name) !== '' && normalize(s.class_name) === normalize(req.declared_class_name)) score++;
     return score;

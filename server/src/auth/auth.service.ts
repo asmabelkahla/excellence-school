@@ -155,7 +155,8 @@ export class AuthService {
     }
 
     // Declared classes must exist (the form only offers real ones, but the API never trusts it).
-    const classIds = [...new Set(data.children.map(c => c.classId).filter((id): id is string => !!id))];
+    const children = data.children ?? [];
+    const classIds = [...new Set(children.map(c => c.classId).filter((id): id is string => !!id))];
     const classes = classIds.length ? await this.classRepository.find({ where: { id: In(classIds) } }) : [];
     if (classes.length !== classIds.length) {
       throw new BadRequestException('Une des classes choisies n’existe pas. Rechargez la page et réessayez.');
@@ -182,7 +183,7 @@ export class AuthService {
         google_sub: google?.sub ?? null,
       });
 
-      const requests = data.children.map(child =>
+      const requests = children.map(child =>
         manager.getRepository(LinkRequest).create({
           id: this.newId('lr'),
           parent_id: parentId,
@@ -200,7 +201,7 @@ export class AuthService {
           admin_note: null,
         }),
       );
-      await manager.getRepository(LinkRequest).save(requests);
+      if (requests.length) await manager.getRepository(LinkRequest).save(requests);
       return user;
     });
 
@@ -232,10 +233,34 @@ export class AuthService {
       return { ...request, status: 'rejected' };
     }
 
-    const student = await this.studentRepository.findOne({ where: { id: dto.studentId! } });
-    if (!student) throw new NotFoundException('Élève introuvable.');
+    // Either an existing student, or a new one created from what the parent declared.
+    let existing: Student | null = null;
+    let newClass: SchoolClass | null = null;
+    if (dto.studentId) {
+      existing = await this.studentRepository.findOne({ where: { id: dto.studentId } });
+      if (!existing) throw new NotFoundException('Élève introuvable.');
+    } else {
+      const classId = dto.classId || request.declared_class_id;
+      if (!classId) {
+        throw new BadRequestException('Choisissez la classe de l’élève à créer, ou un élève déjà inscrit.');
+      }
+      newClass = await this.classRepository.findOne({ where: { id: classId } });
+      if (!newClass) throw new BadRequestException('La classe choisie n’existe plus.');
+    }
 
-    await this.dataSource.transaction(async manager => {
+    const student = await this.dataSource.transaction(async manager => {
+      const student = existing ?? (await manager.getRepository(Student).save({
+        id: this.newId('std'),
+        first_name: request.child_first_name.trim(),
+        last_name: request.child_last_name.trim(),
+        first_name_ar: null,
+        last_name_ar: null,
+        birth_date: null,
+        gender: null,
+        class_id: newClass!.id,
+        class_name: newClass!.name,
+        level_id: newClass!.level_id,
+      }));
       await manager.getRepository(ParentStudent).save({
         parent_id: request.parent_id,
         student_id: student.id,
@@ -248,9 +273,48 @@ export class AuthService {
       });
       // The parent account becomes usable once at least one child is validated.
       await manager.getRepository(User).update(request.parent_id, { active: true });
+      return student;
     });
 
-    return { ...request, status: 'approved', student_id: student.id };
+    return { ...request, status: 'approved', student_id: student.id, student_created: !existing, student };
+  }
+
+  // ------------------------------------------- registrations without a child
+
+  /** Self-registered parents still waiting, who declared no child (nothing to match). */
+  private pendingAccountsQuery() {
+    return this.userRepository
+      .createQueryBuilder('u')
+      .where("u.role = 'parent'")
+      .andWhere('u.active = false')
+      .andWhere('u.invited_by_id IS NULL')
+      .andWhere('NOT EXISTS (SELECT 1 FROM link_requests r WHERE r.parent_id = u.id)')
+      .andWhere('NOT EXISTS (SELECT 1 FROM parent_students ps WHERE ps.parent_id = u.id)');
+  }
+
+  async listPendingAccounts() {
+    const users = await this.pendingAccountsQuery().orderBy('u.created_at', 'DESC').getMany();
+    return users.map(u => ({ id: u.id, full_name: u.full_name, email: u.email, phone: u.phone, created_at: u.created_at }));
+  }
+
+  private async requirePendingAccount(id: string) {
+    const user = await this.pendingAccountsQuery().andWhere('u.id = :id', { id }).getOne();
+    if (!user) throw new NotFoundException('Inscription introuvable ou déjà traitée.');
+    return user;
+  }
+
+  /** Opens the account; the parent then declares their children from their space. */
+  async activatePendingAccount(id: string) {
+    const user = await this.requirePendingAccount(id);
+    await this.userRepository.update(user.id, { active: true });
+    return { id: user.id, active: true };
+  }
+
+  /** Refuses the registration: the account never had any data, so it is removed. */
+  async rejectPendingAccount(id: string) {
+    const user = await this.requirePendingAccount(id);
+    await this.userRepository.delete({ id: user.id });
+    return { id: user.id, deleted: true };
   }
 
   // ---------------------------------------------------------------- staff

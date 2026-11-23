@@ -81,6 +81,51 @@
     </div>
   </section>
 
+  <!-- Registrations without a declared child -->
+  @if (store.pendingAccounts().length > 0) {
+    <section class="esm-card requests-card" aria-labelledby="accounts-title">
+      <div class="esm-card-header">
+        <h3 class="esm-card-title" id="accounts-title">
+          Inscriptions sans enfant déclaré ({{ store.pendingAccounts().length }})
+        </h3>
+      </div>
+      <p class="form-hint section-hint">Une fois le compte activé, le parent déclare ses enfants depuis son espace : ses demandes apparaîtront alors ci-dessus.</p>
+      <div class="esm-table-container">
+        <table class="esm-table cards-on-mobile">
+          <thead>
+            <tr>
+              <th scope="col">Parent</th>
+              <th scope="col">Contact</th>
+              <th scope="col">Date</th>
+              <th scope="col" class="col-action">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (acc of store.pendingAccounts(); track acc.id) {
+              <tr>
+                <td data-label="Parent"><strong>{{ acc.full_name }}</strong></td>
+                <td data-label="Contact">
+                  <span class="text-xs text-slate-600">📞 {{ acc.phone || '—' }}</span>
+                  <small class="muted-line">✉️ {{ acc.email || '—' }}</small>
+                </td>
+                <td data-label="Date">{{ acc.created_at | date:'dd/MM/yyyy HH:mm' }}</td>
+                <td class="col-action">
+                  <div class="row-actions">
+                    <button type="button" class="btn btn-sm btn-secondary" (click)="rejectAccount(acc)" [disabled]="accountBusy() === acc.id">Refuser</button>
+                    <button type="button" class="btn btn-sm btn-primary-gold" (click)="activateAccount(acc)" [disabled]="accountBusy() === acc.id">
+                      @if (accountBusy() === acc.id) { <span class="btn-spinner" aria-hidden="true"></span> }
+                      Activer le compte
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+
   <!-- History -->
   @if (store.processed().length > 0) {
     <section class="esm-card history-card" aria-labelledby="history-title">
@@ -141,18 +186,30 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="student-select">Élève existant à rattacher *</label>
-          <select id="student-select" class="form-select" [(ngModel)]="selectedStudentId"
-                  [attr.aria-invalid]="modalError() && !selectedStudentId ? true : null">
-            <option value="">— Choisir un élève —</option>
+          <label class="form-label" for="student-select">Dossier de l’élève</label>
+          <select id="student-select" class="form-select" [(ngModel)]="selectedStudentId">
+            <option value="">➕ Nouvel élève : {{ req.child_first_name }} {{ req.child_last_name }}</option>
             @for (opt of studentOptions(); track opt.student.id) {
               <option [value]="opt.student.id">
-                {{ opt.score >= 2 ? '★ ' : '' }}{{ opt.student.first_name }} {{ opt.student.last_name }} ({{ opt.student.class_name || 'sans classe' }})
+                {{ opt.score >= SAME_NAME ? '★ ' : '' }}{{ opt.student.first_name }} {{ opt.student.last_name }} ({{ opt.student.class_name || 'sans classe' }})
               </option>
             }
           </select>
-          <p class="form-hint">★ = nom et prénom identiques à la déclaration. Vérifiez toujours le livret de famille.</p>
+          <p class="form-hint">★ = nom et prénom identiques à la déclaration. Si l’élève n’est pas encore inscrit, gardez « Nouvel élève » : il sera ajouté automatiquement à sa classe.</p>
         </div>
+
+        @if (!selectedStudentId) {
+          <div class="form-group">
+            <label class="form-label" for="new-class">Classe du nouvel élève *</label>
+            <select id="new-class" class="form-select" [(ngModel)]="newStudentClassId"
+                    [attr.aria-invalid]="modalError() && !newStudentClassId ? true : null">
+              <option value="">— Choisir la classe —</option>
+              @for (c of store.classes(); track c.id) {
+                <option [value]="c.id">{{ c.name }}{{ c.id === req.declared_class_id ? ' (déclarée par le parent)' : '' }}</option>
+              }
+            </select>
+          </div>
+        }
 
         <div class="form-group">
           <label class="form-label" for="admin-note">Note interne (optionnel)</label>

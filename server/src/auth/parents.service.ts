@@ -177,7 +177,11 @@ export class ParentsService {
         active: p.active,
         must_change_password: p.must_change_password,
         created_at: p.created_at,
-        status: p.active ? 'active' : pendingRequests > 0 ? 'pending' : 'inactive',
+        status: p.active
+          ? 'active'
+          : pendingRequests > 0 || (!p.invited_by_id && children.length === 0)
+            ? 'pending'
+            : 'inactive',
         pending_requests: pendingRequests,
         children,
       };

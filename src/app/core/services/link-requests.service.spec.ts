@@ -34,10 +34,12 @@ describe('LinkRequestsService', () => {
 
   afterEach(() => http.verify());
 
-  async function loadWith(requests: LinkRequest[]) {
+  async function loadWith(requests: LinkRequest[], accounts: unknown[] = []) {
     const promise = service.load(true);
     http.expectOne(`${api}/auth/link-requests`).flush(requests);
     http.expectOne(`${api}/students`).flush([{ id: 'std-1', first_name: 'Youssef', last_name: 'Ben Ali', class_name: '3ème A' }]);
+    http.expectOne(`${api}/classes`).flush([{ id: 'cls-3a', name: '3ème A', level_id: 'lvl-3' }]);
+    http.expectOne(`${api}/auth/pending-accounts`).flush(accounts);
     await promise;
   }
 
@@ -58,6 +60,8 @@ describe('LinkRequestsService', () => {
     const promise = service.load(true);
     http.expectOne(`${api}/auth/link-requests`).flush({ message: 'Accès refusé : rôle non autorisé.' }, { status: 403, statusText: 'Forbidden' });
     http.expectOne(`${api}/students`).flush([]);
+    http.expectOne(`${api}/classes`).flush([]);
+    http.expectOne(`${api}/auth/pending-accounts`).flush([]);
     await promise;
     expect(service.error()).toBe('Accès refusé : rôle non autorisé.');
     expect(service.loaded()).toBeFalse();
@@ -90,5 +94,32 @@ describe('LinkRequestsService', () => {
       .flush({ message: 'Cette demande a déjà été traitée.' }, { status: 400, statusText: 'Bad Request' });
     await expectAsync(promise).toBeRejectedWithError('Cette demande a déjà été traitée.');
     expect(service.pendingCount()).toBe(1);
+  });
+
+  it('approves without an existing student: sends the class, adds the created student', async () => {
+    await loadWith([request()]);
+    const promise = service.review('lr-1', { decision: 'approved', studentId: '', classId: 'cls-3a' });
+    const req = http.expectOne(`${api}/auth/link-requests/lr-1/review`);
+    expect(req.request.body).toEqual({ decision: 'approved', classId: 'cls-3a' });
+    req.flush({ ...request({ status: 'approved', student_id: 'std-new' }), student_created: true,
+      student: { id: 'std-new', first_name: 'Rayen', last_name: 'Ben Ali', class_id: 'cls-3a', class_name: '3ème A' } });
+    const result = await promise;
+    expect(result.student_created).toBeTrue();
+    expect(service.students().some(s => s.id === 'std-new')).toBeTrue();
+    expect(service.pendingCount()).toBe(0);
+  });
+
+  it('lists registrations without a child and activates / refuses them', async () => {
+    const acc = (id: string) => ({ id, full_name: 'Parent ' + id, email: id + '@test.tn', phone: null, created_at: '2026-11-23T10:00:00Z' });
+    await loadWith([], [acc('a'), acc('b')]);
+    expect(service.pendingCount()).toBe(2);
+
+    let promise = service.activateAccount('a');
+    http.expectOne(`${api}/auth/pending-accounts/a/activate`).flush({ id: 'a', active: true });
+    await promise;
+    promise = service.rejectAccount('b');
+    http.expectOne(`${api}/auth/pending-accounts/b/reject`).flush({ id: 'b', deleted: true });
+    await promise;
+    expect(service.pendingAccounts().length).toBe(0);
   });
 });

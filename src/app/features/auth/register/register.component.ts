@@ -108,9 +108,21 @@ export class RegisterComponent implements OnInit, AfterViewInit {
   }
 
   removeChildField(index: number) {
-    if (this.children.length > 1) {
-      this.children.splice(index, 1);
+    this.children.splice(index, 1);
+  }
+
+  /** A child row with only one of the two names: the parent must complete or remove it. */
+  childIncomplete(child: ChildInput): boolean {
+    return !!child.firstName.trim() !== !!child.lastName.trim();
+  }
+
+  /** Children are optional; empty rows are ignored, half-filled ones are an error. */
+  private childrenToSend(): ChildInput[] | null {
+    if (this.children.some(c => this.childIncomplete(c))) {
+      this.errorMessage.set('Complétez le prénom et le nom de chaque enfant, ou retirez la ligne.');
+      return null;
     }
+    return this.children.filter(c => c.firstName.trim() && c.lastName.trim());
   }
 
   async onSubmit() {
@@ -118,11 +130,11 @@ export class RegisterComponent implements OnInit, AfterViewInit {
     this.submitted.set(true);
     this.errorMessage.set('');
 
-    const validChildren = this.children.filter(child => child.firstName.trim() && child.lastName.trim());
+    const validChildren = this.childrenToSend();
+    if (!validChildren) return;
 
     if (this.google()) {
       if (!this.phone.trim()) { this.errorMessage.set('Veuillez renseigner votre téléphone.'); return; }
-      if (validChildren.length === 0) { this.errorMessage.set('Veuillez renseigner au moins un enfant (prénom et nom).'); return; }
       this.loading.set(true);
       try {
         const message = await this.auth.googleRegister({ phone: this.phone, relationship: this.relationship, children: validChildren });
@@ -150,10 +162,6 @@ export class RegisterComponent implements OnInit, AfterViewInit {
     }
     if (this.confirmInvalid) {
       this.errorMessage.set('Les deux mots de passe ne correspondent pas.');
-      return;
-    }
-    if (validChildren.length === 0) {
-      this.errorMessage.set('Veuillez renseigner au moins un enfant (prénom et nom).');
       return;
     }
 
