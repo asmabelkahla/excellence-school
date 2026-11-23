@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import * as bcrypt from 'bcryptjs';
+import { hashPassword } from './auth/passwords';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 
@@ -36,7 +36,7 @@ export class AppService implements OnModuleInit {
       full_name: 'Direction Excellence School',
       phone: null,
       email,
-      password: await bcrypt.hash(password, 12),
+      password: await hashPassword(password),
       locale: 'fr',
       active: true,
       avatar_url: 'assets/avatars/admin.png',

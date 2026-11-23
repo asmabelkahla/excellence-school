@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -18,6 +18,7 @@ import { ParentStudent } from './entities/parent-student.entity';
 import { LinkRequest } from './entities/link-request.entity';
 import { StaffInvitation } from './entities/staff-invitation.entity';
 import { ClassTeacher } from './entities/class-teacher.entity';
+import { AppThrottlerGuard, THROTTLERS } from './rate-limit';
 
 @Module({
   imports: [
@@ -25,8 +26,8 @@ import { ClassTeacher } from './entities/class-teacher.entity';
       isGlobal: true,
       envFilePath: ['.env', '.env.local'],
     }),
-    // Global rate limit: 100 requests / minute / IP (auth routes are stricter).
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
+    // Rate limits per account (per IP only when anonymous) — see rate-limit.ts.
+    ThrottlerModule.forRoot(THROTTLERS),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => {
@@ -50,6 +51,14 @@ import { ClassTeacher } from './entities/class-teacher.entity';
           logging: config.get<string>('DB_LOGGING', 'false') === 'true',
           // Neon / Render Postgres require TLS.
           ssl: useSsl ? { rejectUnauthorized: false } : false,
+          // Connection pool: enough for a small instance, and fail fast instead of hanging
+          // (a sleeping Neon database takes a few seconds to wake up).
+          extra: {
+            max: Number(config.get<string>('DB_POOL_MAX', '10')),
+            connectionTimeoutMillis: 15_000,
+            idleTimeoutMillis: 30_000,
+            keepAlive: true,
+          },
         };
       },
       inject: [ConfigService],
@@ -63,6 +72,6 @@ import { ClassTeacher } from './entities/class-teacher.entity';
     CalendarModule,
   ],
   controllers: [AppController],
-  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [AppService, { provide: APP_GUARD, useClass: AppThrottlerGuard }],
 })
 export class AppModule {}

@@ -1,13 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import * as bcrypt from 'bcryptjs';
+import { hashPassword } from './passwords';
 import { randomUUID } from 'crypto';
 import { DataSource, In, Repository } from 'typeorm';
 import { LinkRequest, ParentRelationship } from '../entities/link-request.entity';
 import { ParentStudent } from '../entities/parent-student.entity';
 import { Student } from '../entities/student.entity';
 import { User } from '../entities/user.entity';
-import { assertEmailFree, BCRYPT_ROUNDS, generateTemporaryPassword } from './account-utils';
+import { assertEmailFree, generateTemporaryPassword } from './account-utils';
 import { ChildLinkDto, CreateParentDto, UpdateParentDto } from './dto/parent.dto';
 
 export type ParentStatus = 'active' | 'pending' | 'inactive';
@@ -62,7 +62,7 @@ export class ParentsService {
         full_name: dto.fullName,
         email: dto.email,
         phone: dto.phone || null,
-        password: await bcrypt.hash(temporaryPassword, BCRYPT_ROUNDS),
+        password: await hashPassword(temporaryPassword),
         locale: 'fr',
         active: true,
         avatar_url: 'assets/avatars/parent.png',
@@ -111,7 +111,7 @@ export class ParentsService {
     await this.requireParent(id);
     const temporaryPassword = generateTemporaryPassword();
     await this.users.update(id, {
-      password: await bcrypt.hash(temporaryPassword, BCRYPT_ROUNDS),
+      password: await hashPassword(temporaryPassword),
       must_change_password: true,
       tokens_valid_after: new Date(),
     });

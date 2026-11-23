@@ -3,8 +3,6 @@ import { randomInt } from 'crypto';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 
-export const BCRYPT_ROUNDS = 12;
-
 // No 0/O, 1/l/I: the admin reads this password out or writes it down.
 const ALPHABET = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 

@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import * as bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
 import { DataSource, In, Repository } from 'typeorm';
 import { SchoolClass } from '../entities/class.entity';
@@ -17,13 +16,11 @@ import { StaffInvitation } from '../entities/staff-invitation.entity';
 import { Student } from '../entities/student.entity';
 import { StaffRole, User } from '../entities/user.entity';
 import { RegisterParentDto } from './dto/register-parent.dto';
+import { hashPassword, needsRehash, verifyPassword } from './passwords';
 import { ReviewLinkRequestDto } from './dto/review-link-request.dto';
 
 export type SafeUser = Omit<User, 'password' | 'tokens_valid_after' | 'google_sub'>;
 
-const BCRYPT_ROUNDS = 12;
-// Pre-computed hash used to keep login timing constant when the user does not exist.
-const DUMMY_HASH = '$2b$12$3gPBxxmHGXMA1jBlxiDDZu5OBU82aKYApoKpvKmgpHkCg.oSybVoe';
 const INVALID_CREDENTIALS = 'Identifiant ou mot de passe incorrect.';
 
 @Injectable()
@@ -56,7 +53,7 @@ export class AuthService {
   }
 
   private hashPassword(password: string) {
-    return bcrypt.hash(password, BCRYPT_ROUNDS);
+    return hashPassword(password);
   }
 
   private newId(prefix: string) {
@@ -73,8 +70,8 @@ export class AuthService {
       .getOne();
 
     // Always run bcrypt so response time does not reveal whether the account exists.
-    const passwordMatches = await bcrypt.compare(password, user?.password || DUMMY_HASH);
-    if (!user || !user.password || !passwordMatches) {
+    const passwordMatches = await verifyPassword(password, user?.password);
+    if (!user || !passwordMatches) {
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
 
@@ -84,6 +81,11 @@ export class AuthService {
           ? 'Votre compte est en attente de validation par l’administration.'
           : 'Ce compte a été désactivé. Contactez l’administration.',
       );
+    }
+
+    // Upgrade hashes made with an older cost (e.g. 12) to the current one, silently.
+    if (user.password && needsRehash(user.password)) {
+      await this.userRepository.update(user.id, { password: await hashPassword(password) });
     }
 
     const token = await this.signToken(user);
@@ -114,10 +116,10 @@ export class AuthService {
    */
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user || !user.password || !(await bcrypt.compare(currentPassword, user.password))) {
+    if (!user || !user.password || !(await verifyPassword(currentPassword, user.password))) {
       throw new BadRequestException('Le mot de passe actuel est incorrect.');
     }
-    if (await bcrypt.compare(newPassword, user.password)) {
+    if (await verifyPassword(newPassword, user.password)) {
       throw new BadRequestException('Le nouveau mot de passe doit être différent de l’actuel.');
     }
 

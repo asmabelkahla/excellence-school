@@ -5,11 +5,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import * as bcrypt from 'bcryptjs';
+import { hashPassword } from './passwords';
 import { randomUUID } from 'crypto';
 import { In, Not, Repository } from 'typeorm';
 import { STAFF_ROLES, User } from '../entities/user.entity';
-import { assertEmailFree, BCRYPT_ROUNDS, generateTemporaryPassword } from './account-utils';
+import { assertEmailFree, generateTemporaryPassword } from './account-utils';
 import { CreateStaffDto, UpdateStaffDto } from './dto/staff.dto';
 
 export type StaffMember = Omit<User, 'password' | 'tokens_valid_after'>;
@@ -37,7 +37,7 @@ export class StaffService {
         full_name: dto.fullName,
         email: dto.email,
         phone: dto.phone || null,
-        password: await bcrypt.hash(temporaryPassword, BCRYPT_ROUNDS),
+        password: await hashPassword(temporaryPassword),
         locale: 'fr',
         active: true,
         avatar_url: 'assets/avatars/default.png',
@@ -95,7 +95,7 @@ export class StaffService {
 
     const temporaryPassword = generateTemporaryPassword();
     await this.users.update(target.id, {
-      password: await bcrypt.hash(temporaryPassword, BCRYPT_ROUNDS),
+      password: await hashPassword(temporaryPassword),
       must_change_password: true,
       tokens_valid_after: new Date(),
     });

@@ -197,8 +197,13 @@
 .check-row { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; cursor: pointer; }
 .form-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
 
+/* Read-only (parents, teachers, économe): narrower side panel, no form. */
+.calendar-layout.readonly { grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem); }
+
+/* One column on tablets and phones — for every role, read-only included. */
 @media (max-width: 1100px) {
-  .calendar-layout { grid-template-columns: 1fr; }
+  .calendar-layout,
+  .calendar-layout.readonly { grid-template-columns: minmax(0, 1fr); }
 }
 
 .calendar-panel, .side { min-width: 0; }
@@ -207,7 +212,7 @@
   .calendar-panel { padding: 0.75rem; }
   .toolbar { grid-template-columns: 1fr; justify-items: stretch; gap: 0.5rem; }
   .period-title { order: -1; }
-  .nav-group { justify-content: space-between; }
+  .nav-group .btn { margin-inline-start: auto; } /* arrows together, "Aujourd’hui" on the right */
   .view-switch { justify-self: stretch; button { flex: 1; } }
   .month-grid { gap: 0.2rem; }
   .weekday { font-size: 0.68rem; }
@@ -221,7 +226,6 @@
 }
 
 .readonly-note { margin-inline-start: 0.4rem; font-weight: 700; color: var(--gold-700); }
-.calendar-layout.readonly { grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem); }
 .private-tag { padding: 0.1rem 0.45rem; border-radius: 9999px; background: var(--slate-800); color: #fff; font-size: 0.7rem; font-weight: 800; }
 
 .visibility {

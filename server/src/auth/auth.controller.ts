@@ -19,15 +19,16 @@ export class AuthController {
     private readonly google: GoogleAuthService,
   ) {}
 
-  // Brute-force protection: 5 attempts / minute / IP.
+  // Brute force: 5 attempts / minute per account and address, 20 per account overall
+  // (rate-limit.ts). Per address alone the limit is wide: a whole school Wi-Fi shares one IP.
   @Post('login')
-  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @Throttle({ default: { ttl: 60_000, limit: 30 } })
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto.identifier, loginDto.password);
   }
 
   @Post('register')
-  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   registerParent(@Body() registerParentDto: RegisterParentDto) {
     return this.authService.registerParent(registerParentDto);
   }
@@ -40,14 +41,14 @@ export class AuthController {
 
   /** Sign in with a Google ID token; unknown account → registration token for step 2. */
   @Post('google')
-  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @Throttle({ default: { ttl: 60_000, limit: 30 } })
   googleSignIn(@Body() dto: GoogleCredentialDto) {
     return this.google.signIn(dto.credential);
   }
 
   /** Step 2 of a Google registration: phone, relationship and children. */
   @Post('google/register')
-  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   googleRegister(@Body() dto: GoogleRegisterDto) {
     return this.google.register(dto);
   }
